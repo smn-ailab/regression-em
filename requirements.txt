@@ -1,9 +1,0 @@
-scipy
-mypy
-pylint
-flake8
-autopep8
-isort
-pytest
-lightgbm
-sklearn
