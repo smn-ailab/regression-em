@@ -2,14 +2,16 @@
 	"name": "RegressionEM",
 	"context": "..",
 	"dockerFile": "Dockerfile",
-	"postCreateCommand": "pip install -r requirements.txt",
-	// Use 'settings' to set *default* container specific settings.json values on container create. 
+	"postCreateCommand": "pip install -r requirements-dev.txt",
+	// Use 'settings' to set *default* container specific settings.json values on container create.
 	// You can edit these settings after create using File > Preferences > Settings > Remote.
 	"settings": {
 		"autoDocstring.docstringFormat": "sphinx",
 		"autoDocstring.guessTypes": false,
 		"editor.formatOnSave": true,
 		"editor.suggestSelection": "first",
+		"files.trimFinalNewlines": true,
+		"files.trimTrailingWhitespace": true,
 		"git.autofetch": true,
 		"git.confirmSync": false,
 		"kite.showWelcomeNotificationOnStartup": false,
@@ -27,7 +29,7 @@
 			"tests"
 		],
 		"python.testing.pytestEnabled": true,
-		"terminal.integrated.shell.linux": "/bin/bash",		
+		"terminal.integrated.shell.linux": "/bin/bash",
 		"vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue"
 	},
 	// Add the IDs of extensions you want installed when the container is created in the array below.
