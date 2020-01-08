@@ -6,3 +6,4 @@ autopep8
 isort
 pytest
 lightgbm
+sklearn
