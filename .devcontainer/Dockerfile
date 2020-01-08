@@ -6,7 +6,7 @@ FROM python:3.8-slim-buster
 # See https://stackoverflow.com/a/47143497 for the meaning of `set -ex`.
 RUN set -ex \
   && apt-get update \
-  && apt-get install -y g++ git gnupg openssh-client wget libblas-dev liblapack-dev software-properties-common
+  && apt-get install -y git gnupg openssh-client wget libblas-dev liblapack-dev software-properties-common
 
 # Install clang 8.
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
