@@ -202,8 +202,3 @@ class RegressionEM:
     def predict(self, left_feat: np.ndarray, right_feat: np.ndarray) -> np.ndarray:
         probs = self.predict_proba(left_feat, right_feat)
         return np.array([p >= 0.5 for p in probs])
-
-
-if __name__ == "__main__":
-    rem = RegressionEM(max_iter=20, with_sample_weights=True, alpha=1)
-    print("test")
