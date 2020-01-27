@@ -17,15 +17,38 @@ class RegressionEM:
 
        Outcome = Left latent * Right latent
 
-       # TODO: Write detail description later.
+       dataset:
+
+
+
+
+
+       :Parameters:
+
+       alpha : float, default=1
+       weights associated with regularization term to
+
+       max_iter : int, default=100
+       Maximum number of iterations taken for the solvers to converge.
+
+       epsilon : float, default =  to avoid zero devide
+
+
+       with_sample_weights : bool, default = False
+
+
+
 
        :Example:
-       # TODO: Write usage later.
+
+       >>> import RegressionEM
+       >>> rem = RegressionEM(max_iter=100, with_sample_weights=True, alpha=1)
+       >>> rem.fit(expo_train, rel_train, label_train)
     """
 
     def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, with_sample_weights: bool = False) -> None:
         """Initialize hyper parameters."""
-        self.alpha = alpha
+        self._alpha = alpha
         self.max_iter = max_iter
         self.epsilon = epsilon
         self.with_sample_weights = with_sample_weights
@@ -101,29 +124,15 @@ class RegressionEM:
         :param responsibilities: Sequence of responsibilities calculated at E-step.
         :return: Updated M-step params.
         """
-        if self.alpha:
-            reg = Ridge(alpha=self.alpha)
+        if self._alpha:
+            reg = Ridge(alpha=self._alpha)
         else:
             reg = LinearRegression()
         reg.fit(feat_mat, self.calc_logits(responsibilities), sample_weights)
         return reg.coef_, reg.intercept_
 
-    def update_expo_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> Tuple[np.ndarray, float]:
-        """Return fitted Logistic Regression params.
-
-        :param feat_mat: Feature matrix to be used to learn responsibility.
-        :param responsibilities: Sequence of responsibilities calculated at E-step.
-        :return: Updated M-step params.
-        """
-        if self.alpha:
-            reg = Ridge(alpha=self.alpha * 100)
-        else:
-            reg = LinearRegression()
-        reg.fit(feat_mat, self.calc_logits(responsibilities), sample_weights)
-        return reg.coef_, reg.intercept_
-
-    def calc_log_likelihood(self, left_feat: np.ndarray, right_feat: np.ndarray,
-                            labels: np.ndarray) -> np.ndarray:
+    def _calc_log_likelihood(self, left_feat: np.ndarray, right_feat: np.ndarray,
+                             labels: np.ndarray) -> np.ndarray:
         """Return log likelihood.
 
             # TODO: Describe formula here.
@@ -149,37 +158,51 @@ class RegressionEM:
 
         return positive_sample_log_lh + negative_sample_log_lh
 
-    def fit(self, left_feat: np.ndarray, right_feat: np.ndarray, labels: np.ndarray) -> None:
+    # def fit(self, left_feat: np.ndarray, right_feat: np.ndarray, labels: np.ndarray) -> None:
+    def fit(self, X, y, index: int) -> None:
         """Estimate regression EM params.
 
-        :param left_feat: Feature matrix to be used to learn left params.
-        :param right_feat: Feature matrix to be used to learn right params.
-        :param labels: Sequence of labels indicating each sample is positive or negative.
+        #:param left_feat: Feature matrix to be used to learn left params.
+        #:param right_feat: Feature matrix to be used to learn right params.
+
+        :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
+                  Feature matrix derived from concatenating left latent features with right latent features.
+
+        :param y: array-like of shape (n_samples,)
+                  Sequence of labels indicating each sample is positive or negative.
+
+        :param index: int
+                      the index to devide X into left latent features and right latent features.
+
         """
+        # separate dataset
+
+        left_feat, right_feat = np.hsplit(X, [index])
+
         # Initialize params (feature weight, intercept).
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
         self.right_params = (np.random.rand(right_feat.shape[1]), random())
-        self.log_likelihoods = [self.calc_log_likelihood(left_feat, right_feat, labels)]
+        self.log_likelihoods = [self._calc_log_likelihood(left_feat, right_feat, y)]
         max_ll = self.log_likelihoods[-1]
         best_left_params = self.left_params
         best_right_params = self.right_params
 
         sample_weights = None
         if self.with_sample_weights:
-            pos_ratio = len([l for l in labels if l]) / len(labels)
-            sample_weights = [1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels]
+            pos_ratio = len([l for l in y if l]) / len(y)
+            sample_weights = [1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in y]
 
         for epoch in range(self.max_iter):
             # Update left latent params
-            left_responsibilities = self.update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
-            self.left_params = self.update_expo_params(left_feat, left_responsibilities, sample_weights)
+            left_responsibilities = self.update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, y)
+            self.left_params = self.update_params(left_feat, left_responsibilities, sample_weights)
 
             # Update right latent params
-            right_responsibilities = self.update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, labels)
+            right_responsibilities = self.update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, y)
             self.right_params = self.update_params(right_feat, right_responsibilities, sample_weights)
 
             # 尤度の計算と収束判定
-            self.log_likelihoods.append(self.calc_log_likelihood(left_feat, right_feat, labels))
+            self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, y))
 
             if max_ll < self.log_likelihoods[-1]:
                 max_ll = self.log_likelihoods[-1]
@@ -189,16 +212,23 @@ class RegressionEM:
         self.left_params = best_left_params
         self.right_params = best_right_params
 
-    def predict_proba(self, left_feat: np.ndarray, right_feat: np.ndarray) -> np.ndarray:
+    def predict_proba(self, X, index: int) -> np.ndarray:
         """Return predicted probabilities.
 
         :param left_feat: Feature matrix to be used to predict left latent factor.
         :param right_feat: Feature matrix to be used to predict right latent factor.
         :return: Predicted probabilities.
         """
+        # separate dataset
+        left_feat, right_feat = np.hsplit(X, [index])
+
         return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
             self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
-    def predict(self, left_feat: np.ndarray, right_feat: np.ndarray) -> np.ndarray:
+    def predict(self, X, index: int) -> np.ndarray:
+
+        # separate dataset
+        left_feat, right_feat = np.hsplit(X, [index])
+
         probs = self.predict_proba(left_feat, right_feat)
         return np.array([p >= 0.5 for p in probs])
