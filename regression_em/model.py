@@ -189,7 +189,7 @@ class RegressionEM:
 
         sample_weights = None
         if self.with_sample_weights:
-            pos_ratio = len([l for l in y if l]) / len(y)
+            pos_ratio = np.count_nonzero(y) / y.size
             sample_weights = [1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in y]
 
         for epoch in range(self.max_iter):
