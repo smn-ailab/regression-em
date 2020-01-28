@@ -12,7 +12,7 @@ from sklearn.linear_model import LinearRegression, Ridge
 RegParam = Tuple[np.ndarray, float]
 
 
-class RegressionEM:
+class RegressionEM(BaseEstimator):
     """Estimate latent factors based on below model.
 
        Outcome = Left latent * Right latent
@@ -110,14 +110,14 @@ class RegressionEM:
         :return: List of responsibilities.
         """
         # The format of params must be (coef vector, intercept).
-        # targetのパラメーター更新のために更新後のrefでrefの確率を計算
+        # Calculating ref prob. with updated ref params for updating target param
 
         target_probs = self.calc_probs(target_params[0], target_params[1], target_feat)
         ref_probs = self.calc_probs(ref_params[0], ref_params[1], ref_feat)
 
         return np.vectorize(self.calc_responsibility)(target_probs, ref_probs, labels)
 
-    def update_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> Tuple[np.ndarray, float]:
+    def update_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> Tuple[RegParam, float]:
         """Return fitted Logistic Regression params.
 
         :param feat_mat: Feature matrix to be used to learn responsibility.
