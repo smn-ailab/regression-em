@@ -32,7 +32,7 @@ class RegressionEM(BaseEstimator):
        Maximum number of iterations taken for the solvers to converge
 
        epsilon : float, default=1e-10
-       Minute value to avoid zero devide
+       Tiny value for avoiding zero devide
 
        with_sample_weights : bool, default = False
        indicator to use imbalance weight
@@ -137,6 +137,9 @@ class RegressionEM(BaseEstimator):
 
         :param feat_mat: Feature matrix to be used to learn responsibility.
         :param responsibilities: Sequence of responsibilities calculated at E-step.
+        :param sample_weights: Sequence of Weights for treating imbalance dataset.
+        for positive data: 1/n-positive data
+        for negative data: 1/n-negative data
         :return: Updated M-step params.
         """
         if self._alpha:
@@ -149,13 +152,13 @@ class RegressionEM(BaseEstimator):
     def _calc_log_likelihood(self, left_feat: np.ndarray, right_feat: np.ndarray,
                              labels: np.ndarray) -> np.ndarray:
         """Return log likelihood.
+        positive label: log(outcome_probs)
+        negative label: log(1-outcome_probs)
 
-            # TODO: Describe formula here.
-
-        :param left_feat:
-        :param right_feat:
-        :param labels:
-        :return:
+        :param left_feat: Feature matrix to be used to learn left params.
+        :param right_feat: Feature matrix to be used to learn  parightrams.
+        :param labels: Sequence of boolean indicating each sample is positivei or negative.
+        :return: log_likelihood
         """
         # Calculate predicted probabilities of outcome.
         outcome_probs = self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
@@ -177,18 +180,12 @@ class RegressionEM(BaseEstimator):
     def fit(self, X, y, index: int) -> None:
         """Estimate regression EM params.
 
-        #:param left_feat: Feature matrix to be used to learn left params.
-        #:param right_feat: Feature matrix to be used to learn right params.
-
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
                   Feature matrix derived from concatenating left latent features with right latent features.
-
         :param y: array-like of shape (n_samples,)
                   Sequence of labels indicating each sample is positive or negative.
-
         :param index: int
                       the index to devide X into left latent features and right latent features.
-
         """
         # separate dataset
 
@@ -216,7 +213,7 @@ class RegressionEM(BaseEstimator):
             right_responsibilities = self.update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, y)
             self.right_params = self.update_params(right_feat, right_responsibilities, sample_weights)
 
-            # 尤度の計算と収束判定
+            # calculating log likelihood and judging convergence
             self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, y))
 
             if max_ll < self.log_likelihoods[-1]:
@@ -230,17 +227,27 @@ class RegressionEM(BaseEstimator):
     def predict_proba(self, X, index: int) -> np.ndarray:
         """Return predicted probabilities.
 
-        :param left_feat: Feature matrix to be used to predict left latent factor.
-        :param right_feat: Feature matrix to be used to predict right latent factor.
+        :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
+                  Feature matrix derived from concatenating left latent features with right latent features.
+        :param index: int
+                      the index to devide X into left latent features and right latent features.
         :return: Predicted probabilities.
         """
-        # separate dataset
+        # separate dataset with index
         left_feat, right_feat = np.hsplit(X, [index])
 
         return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
             self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
     def predict(self, X, index: int) -> np.ndarray:
+        """Return predicted labels.
+
+        :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
+                  Feature matrix derived from concatenating left latent features with right latent features.
+        :param index: int
+                      the index to devide X into left latent features and right latent features.
+        :return: Predicted labels.
+        """
 
         # separate dataset
         left_feat, right_feat = np.hsplit(X, [index])
