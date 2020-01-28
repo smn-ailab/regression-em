@@ -189,8 +189,7 @@ class RegressionEM(BaseEstimator):
         :param index: int
                       the index to devide X into left latent features and right latent features.
         """
-        # separate dataset
-
+        # separate dataset with index.
         left_feat, right_feat = np.hsplit(X, [index])
 
         # Initialize params (feature weight, intercept).
