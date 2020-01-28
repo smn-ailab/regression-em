@@ -97,6 +97,7 @@ class RegressionEM(BaseEstimator):
     @staticmethod
     def calc_responsibility(target_prob: float, ref_prob: float, is_positive: bool) -> float:
         """Return responsibility to be used in EM algorithm.
+        For detail, see eq.1 of [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 
         :param target_prob: Probability calculated from the parameters to be updated.
         :param ref_prob: Reference probability.
@@ -134,6 +135,7 @@ class RegressionEM(BaseEstimator):
 
     def update_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> Tuple[RegParam, float]:
         """Return fitted Logistic Regression params.
+        For detail, see eq.2 of [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 
         :param feat_mat: Feature matrix to be used to learn responsibility.
         :param responsibilities: Sequence of responsibilities calculated at E-step.
@@ -252,5 +254,6 @@ class RegressionEM(BaseEstimator):
         # separate dataset
         left_feat, right_feat = np.hsplit(X, [index])
 
+        # calculating probs
         probs = self.predict_proba(left_feat, right_feat)
         return np.array([p >= 0.5 for p in probs])
