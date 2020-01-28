@@ -35,7 +35,7 @@ class RegressionEM(BaseEstimator):
        Tiny value for avoiding zero devide
 
        with_sample_weights : bool, default = False
-       indicator to use imbalance weight
+       Indicator to use imbalance weight
 
        :Example:
 
