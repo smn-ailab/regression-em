@@ -1,5 +1,5 @@
-"""Package to perform regression EM algorithmself.
-For the detail of this algortihm,
+"""Package to perform regression EM algorithm self.
+For the detail of this algortithm,
 see [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 """
 from random import random
@@ -7,6 +7,7 @@ from typing import Sequence, Tuple
 
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.base import BaseEstimator
 
 # Define type.
 RegParam = Tuple[np.ndarray, float]
