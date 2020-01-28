@@ -14,37 +14,51 @@ RegParam = Tuple[np.ndarray, float]
 
 
 class RegressionEM(BaseEstimator):
-    """Estimate latent factors based on below model.
+    """Regression EM can estimate latent factors based on below model.
 
        Outcome = Left latent * Right latent
 
-       dataset:
-
-
-
-
+       For the detail of Regression EM algortithm,
+       see [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
+       "Position Bias Estimation for Unbiased Learning to Rank in Personal Search"
+       Xuanhui Wang et al.
 
        :Parameters:
 
        alpha : float, default=1
-       weights associated with regularization term to
+       Weights associated with regularization term
 
        max_iter : int, default=100
-       Maximum number of iterations taken for the solvers to converge.
+       Maximum number of iterations taken for the solvers to converge
 
-       epsilon : float, default =  to avoid zero devide
-
+       epsilon : float, default=1e-10
+       Minute value to avoid zero devide
 
        with_sample_weights : bool, default = False
-
-
-
+       indicator to use imbalance weight
 
        :Example:
 
        >>> import RegressionEM
+       >>> left_feat = array([[0.17843638, 0.09311004, 0.89600447, ...],
+       [0.55349066, 0.83427622, 0.34841103, ...],
+       ...,
+       [0.22199485, 0.19540406, 0.02678277, ...],
+       [0.62612729, 0.71996384, 0.66445362, ...]])
+       >>> right_feat = array([[..., 0.6177678 , 0.69322733, 0.95146727],
+       [..., 0.96681348, 0.79037145, 0.45834361],
+       ...,
+       [..., 0.64773992, 0.86541352, 0.04755084],
+       [..., 0.37910497, 0.44344932, 0.48168189]])
+       >>> X = np.hstack([left_feat, right_feat])
+       >>> X = array([[0.17843638, 0.09311004, 0.89600447, ..., 0.6177678 , 0.69322733, 0.95146727],
+       [0.55349066, 0.83427622, 0.34841103, ..., 0.96681348, 0.79037145, 0.45834361],
+       ...,
+       [0.22199485, 0.19540406, 0.02678277, ..., 0.64773992, 0.86541352, 0.04755084],
+       [0.62612729, 0.71996384, 0.66445362, ..., 0.37910497, 0.44344932, 0.48168189]])
+       >>> y = array([False, False, False, ...,  True, False,  True])
        >>> rem = RegressionEM(max_iter=100, with_sample_weights=True, alpha=1)
-       >>> rem.fit(expo_train, rel_train, label_train)
+       >>> rem.fit(X, y, 100)
     """
 
     def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, with_sample_weights: bool = False) -> None:
