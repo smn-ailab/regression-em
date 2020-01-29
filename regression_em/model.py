@@ -37,6 +37,9 @@ class RegressionEM(BaseEstimator):
        with_sample_weights : bool, default = False
        Indicator to use imbalance weight
 
+       feature_index : int
+       the index to devide X into left latent features and right latent features.
+
        :Example:
 
        >>> import RegressionEM
@@ -45,28 +48,24 @@ class RegressionEM(BaseEstimator):
        ...,
        [0.22199485, 0.19540406, 0.02678277, ...],
        [0.62612729, 0.71996384, 0.66445362, ...]])
-       >>> right_feat = array([[..., 0.6177678 , 0.69322733, 0.95146727],
-       [..., 0.96681348, 0.79037145, 0.45834361],
+       >>> right_feat = array([[0.6177678 , 0.69322733, 0.95146727, ...],
+       [0.96681348, 0.79037145, 0.45834361, ...],
        ...,
-       [..., 0.64773992, 0.86541352, 0.04755084],
-       [..., 0.37910497, 0.44344932, 0.48168189]])
+       [0.64773992, 0.86541352, 0.04755084, ...],
+       [0.37910497, 0.44344932, 0.48168189, ...]])
        >>> X = np.hstack([left_feat, right_feat])
-       >>> X = array([[0.17843638, 0.09311004, 0.89600447, ..., 0.6177678 , 0.69322733, 0.95146727],
-       [0.55349066, 0.83427622, 0.34841103, ..., 0.96681348, 0.79037145, 0.45834361],
-       ...,
-       [0.22199485, 0.19540406, 0.02678277, ..., 0.64773992, 0.86541352, 0.04755084],
-       [0.62612729, 0.71996384, 0.66445362, ..., 0.37910497, 0.44344932, 0.48168189]])
        >>> y = array([False, False, False, ...,  True, False,  True])
        >>> rem = RegressionEM(max_iter=100, with_sample_weights=True, alpha=1)
        >>> rem.fit(X, y, 100)
     """
 
-    def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, with_sample_weights: bool = False) -> None:
+    def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, with_sample_weights: bool = False, split_index: int = 0) -> None:
         """Initialize hyper parameters."""
         self._alpha = alpha
         self.max_iter = max_iter
         self.epsilon = epsilon
         self.with_sample_weights = with_sample_weights
+        self.split_index = split_index
 
     @staticmethod
     def calc_probs(coef: np.ndarray, intercept: float, feat_vec: np.ndarray) -> np.ndarray:
@@ -127,13 +126,12 @@ class RegressionEM(BaseEstimator):
         """
         # The format of params must be (coef vector, intercept).
         # Calculating ref prob. with updated ref params for updating target param
-
         target_probs = self.calc_probs(target_params[0], target_params[1], target_feat)
         ref_probs = self.calc_probs(ref_params[0], ref_params[1], ref_feat)
 
         return np.vectorize(self.calc_responsibility)(target_probs, ref_probs, labels)
 
-    def update_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> Tuple[RegParam, float]:
+    def update_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> RegParam:
         """Return fitted Logistic Regression params.
         For detail, see eq.2 of [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 
@@ -179,18 +177,16 @@ class RegressionEM(BaseEstimator):
         return positive_sample_log_lh + negative_sample_log_lh
 
     # def fit(self, left_feat: np.ndarray, right_feat: np.ndarray, labels: np.ndarray) -> None:
-    def fit(self, X, y, index: int) -> None:
+    def fit(self, X, y) -> None:
         """Estimate regression EM params.
 
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
                   Feature matrix derived from concatenating left latent features with right latent features.
         :param y: array-like of shape (n_samples,)
                   Sequence of labels indicating each sample is positive or negative.
-        :param index: int
-                      the index to devide X into left latent features and right latent features.
         """
         # separate dataset with index.
-        left_feat, right_feat = np.hsplit(X, [index])
+        left_feat, right_feat = np.hsplit(X, [self.split_index])
 
         # Initialize params (feature weight, intercept).
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
@@ -225,34 +221,30 @@ class RegressionEM(BaseEstimator):
         self.left_params = best_left_params
         self.right_params = best_right_params
 
-    def predict_proba(self, X, index: int) -> np.ndarray:
+    def predict_proba(self, X) -> np.ndarray:
         """Return predicted probabilities.
 
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
                   Feature matrix derived from concatenating left latent features with right latent features.
-        :param index: int
-                      the index to devide X into left latent features and right latent features.
         :return: Predicted probabilities.
         """
         # separate dataset with index
-        left_feat, right_feat = np.hsplit(X, [index])
+        left_feat, right_feat = np.hsplit(X, [self.split_index])
 
         return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
             self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
-    def predict(self, X, index: int) -> np.ndarray:
+    def predict(self, X) -> np.ndarray:
         """Return predicted labels.
 
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
                   Feature matrix derived from concatenating left latent features with right latent features.
-        :param index: int
-                      the index to devide X into left latent features and right latent features.
         :return: Predicted labels.
         """
 
         # separate dataset
-        left_feat, right_feat = np.hsplit(X, [index])
+        left_feat, right_feat = np.hsplit(X, [self.split_index])
 
         # calculating probs
-        probs = self.predict_proba(left_feat, right_feat)
+        probs = self.predict_proba(X)
         return np.array([p >= 0.5 for p in probs])
