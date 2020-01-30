@@ -3,14 +3,17 @@ For the detail of this algortithm,
 see [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 """
 from random import random
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Union
 
 import numpy as np
+import scipy.sparse as sp
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.base import BaseEstimator
 
+
 # Define type.
 RegParam = Tuple[np.ndarray, float]
+Matrix = Union[np.ndarray, sp.csr_matrix, sp.csc_matrix]
 
 
 class RegressionEM(BaseEstimator):
@@ -34,8 +37,12 @@ class RegressionEM(BaseEstimator):
        epsilon : float, default=1e-10
        Tiny value for avoiding zero devide
 
-       with_sample_weights : bool, default = False
-       Indicator to use imbalance weight
+       class_weights : 'balanced', default = None
+       The "balanced" mode uses the values of y to automatically adjust
+       weights inversely proportional to class frequencies in the input data
+       as ``n_samples / (n_classes * np.bincount(y))``
+       Note that these weights will be multiplied with sample_weight (passed
+       through the fit method) if sample_weight is specified.
 
        feature_index : int
        the index to devide X into left latent features and right latent features.
@@ -54,18 +61,29 @@ class RegressionEM(BaseEstimator):
        [0.64773992, 0.86541352, 0.04755084, ...],
        [0.37910497, 0.44344932, 0.48168189, ...]])
        >>> X = np.hstack([left_feat, right_feat])
-       >>> y = array([False, False, False, ...,  True, False,  True])
+       >>> y = array([0, 0, 0, ...,  1, 0, 1])
        >>> rem = RegressionEM(max_iter=100, with_sample_weights=True, alpha=1)
        >>> rem.fit(X, y, 100)
     """
 
-    def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, with_sample_weights: bool = False, split_index: int = 0) -> None:
+    def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, class_weights: str = None, split_index: int = 0) -> None:
         """Initialize hyper parameters."""
+
         self._alpha = alpha
         self.max_iter = max_iter
         self.epsilon = epsilon
-        self.with_sample_weights = with_sample_weights
+        self.class_weights = class_weights
         self.split_index = split_index
+
+    @staticmethod
+    def int_to_bool(y: Sequence[int]) -> Sequence[bool]:
+        """convert y into boolean labels.
+
+        :param y: array-like of shape (n_samples,)
+        Sequence of integer labels indicating each sample is positive or negative.
+        :return: Sequence of booleans.
+        """
+        return [True if i > 0 else False for i in y]
 
     @staticmethod
     def calc_probs(coef: np.ndarray, intercept: float, feat_vec: np.ndarray) -> np.ndarray:
@@ -150,7 +168,7 @@ class RegressionEM(BaseEstimator):
         return reg.coef_, reg.intercept_
 
     def _calc_log_likelihood(self, left_feat: np.ndarray, right_feat: np.ndarray,
-                             labels: np.ndarray) -> np.ndarray:
+                             labels: Sequence[bool]) -> np.ndarray:
         """Return log likelihood.
         positive label: log(outcome_probs)
         negative label: log(1-outcome_probs)
@@ -170,7 +188,7 @@ class RegressionEM(BaseEstimator):
         positive_sample_log_lh = np.sum(np.log(positive_sample_probs))
 
         # Apply the same procedure to negative ones.
-        negative_sample_probs = outcome_probs[~labels]
+        negative_sample_probs = outcome_probs[np.logical_not(labels)]
         negative_sample_probs[negative_sample_probs == 1] = 1 - self.epsilon
         negative_sample_log_lh = np.sum(np.log(1 - negative_sample_probs))
 
@@ -183,35 +201,38 @@ class RegressionEM(BaseEstimator):
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
                   Feature matrix derived from concatenating left latent features with right latent features.
         :param y: array-like of shape (n_samples,)
-                  Sequence of labels indicating each sample is positive or negative.
+                  Sequence of integer labels indicating each sample is positive or negative.
         """
         # separate dataset with index.
         left_feat, right_feat = np.hsplit(X, [self.split_index])
+        # convert y to boolean
+        labels = self.int_to_bool(y)
 
         # Initialize params (feature weight, intercept).
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
         self.right_params = (np.random.rand(right_feat.shape[1]), random())
-        self.log_likelihoods = [self._calc_log_likelihood(left_feat, right_feat, y)]
+
+        self.log_likelihoods = [self._calc_log_likelihood(left_feat, right_feat, labels)]
         max_ll = self.log_likelihoods[-1]
         best_left_params = self.left_params
         best_right_params = self.right_params
 
         sample_weights = None
-        if self.with_sample_weights:
+        if self.class_weights == 'balanced':
             pos_ratio = np.count_nonzero(y) / y.size
-            sample_weights = [1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in y]
+            sample_weights = [1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels]
 
         for epoch in range(self.max_iter):
             # Update left latent params
-            left_responsibilities = self.update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, y)
+            left_responsibilities = self.update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
             self.left_params = self.update_params(left_feat, left_responsibilities, sample_weights)
 
             # Update right latent params
-            right_responsibilities = self.update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, y)
+            right_responsibilities = self.update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, labels)
             self.right_params = self.update_params(right_feat, right_responsibilities, sample_weights)
 
             # calculating log likelihood and judging convergence
-            self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, y))
+            self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, labels))
 
             if max_ll < self.log_likelihoods[-1]:
                 max_ll = self.log_likelihoods[-1]
