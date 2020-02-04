@@ -23,9 +23,8 @@ class RegressionEM(BaseEstimator):
        Outcome = Left latent * Right latent
 
        For the detail of Regression EM algortithm,
-       see [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
-       "Position Bias Estimation for Unbiased Learning to Rank in Personal Search"
-       Xuanhui Wang et al.
+       ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.]
+       (https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 
        :Parameters:
 
@@ -36,7 +35,7 @@ class RegressionEM(BaseEstimator):
        Maximum number of iterations taken for the solvers to converge
 
        epsilon : float, default=1e-10
-       Tiny value for avoiding zero devide
+       Tiny value to avoid division by zero.
 
        class_weights : 'balanced', default = None
        The "balanced" mode uses the values of y to automatically adjust
