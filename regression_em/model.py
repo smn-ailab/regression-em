@@ -1,6 +1,7 @@
 """Package to perform regression EM algorithm self.
 For the detail of this algortithm,
-see [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
+["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.]
+(https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 """
 from random import random
 # from typing import Sequence, Tuple, Union
