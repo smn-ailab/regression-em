@@ -3,7 +3,8 @@ For the detail of this algortithm,
 see [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 """
 from random import random
-from typing import Sequence, Tuple, Union
+# from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -12,8 +13,8 @@ from sklearn.base import BaseEstimator
 
 
 # Define type.
-RegParam = Tuple[np.ndarray, float]
 Matrix = Union[np.ndarray, sp.csr_matrix, sp.csc_matrix]
+RegParam = Tuple[Matrix, float]
 
 
 class RegressionEM(BaseEstimator):
@@ -76,17 +77,11 @@ class RegressionEM(BaseEstimator):
         self.split_index = split_index
 
     @staticmethod
-    def int_to_bool(y: Sequence[int]) -> Sequence[bool]:
-        """convert y into boolean labels.
-
-        :param y: array-like of shape (n_samples,)
-        Sequence of integer labels indicating each sample is positive or negative.
-        :return: Sequence of booleans.
-        """
+    def binary_to_bool(y: np.array) -> np.array:
         return [True if i > 0 else False for i in y]
 
     @staticmethod
-    def calc_probs(coef: np.ndarray, intercept: float, feat_vec: np.ndarray) -> np.ndarray:
+    def calc_probs(coef: Matrix, intercept: float, feat_mat: Matrix) -> Matrix:
         """Return probabilities calculated based on the definition of logistic regression.
 
         :param coef: Coefficient vector of LR.
@@ -95,9 +90,9 @@ class RegressionEM(BaseEstimator):
         :return: Sequence of probabilities.
         """
         # 1 / exp(- (feature @ coef + intercept))
-        return 1 / (1 + np.exp(- feat_vec @ coef - intercept))
+        return 1 / (1 + np.exp(- feat_mat @ coef - intercept))
 
-    def calc_logits(self, probs: np.ndarray) -> np.ndarray:
+    def calc_logits(self, probs: Matrix) -> Matrix:
         """Return logits calculated from probability array.
 
         :param probs: Probability array to be converted to logists.
@@ -105,7 +100,10 @@ class RegressionEM(BaseEstimator):
         :return: Logist arrray.
         """
         # Perform clipping to avoid log(0) and zero division.
-        clipped = probs
+        if sp.issparse(probs):
+            clipped = probs.todense()
+        else:
+            clipped = probs
         clipped[clipped == 0] = self.epsilon
         clipped[clipped == 1] = 1 - self.epsilon
 
@@ -127,9 +125,9 @@ class RegressionEM(BaseEstimator):
         else:
             return (target_prob * (1 - ref_prob)) / (1 - target_prob * ref_prob)
 
-    def update_responsibilities(self, target_params: RegParam, target_feat: np.ndarray,
-                                ref_params: RegParam, ref_feat: np.ndarray,
-                                labels: Sequence[bool]) -> np.ndarray:
+    def update_responsibilities(self, target_params: RegParam, target_feat: Matrix,
+                                ref_params: RegParam, ref_feat: Matrix,
+                                labels: np.array) -> Matrix:
         """Return responsibilities based on M-step parameters.
 
         .. Note::
@@ -149,7 +147,7 @@ class RegressionEM(BaseEstimator):
 
         return np.vectorize(self.calc_responsibility)(target_probs, ref_probs, labels)
 
-    def update_params(self, feat_mat: np.ndarray, responsibilities: np.ndarray, sample_weights) -> RegParam:
+    def update_params(self, feat_mat: Matrix, responsibilities: Matrix, sample_weights) -> RegParam:
         """Return fitted Logistic Regression params.
         For detail, see eq.2 of [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 
@@ -164,11 +162,16 @@ class RegressionEM(BaseEstimator):
             reg = Ridge(alpha=self._alpha)
         else:
             reg = LinearRegression()
+
+        # Linear Regression performs worse on sparse matrix #13460 Problem
+        # https://github.com/scikit-learn/scikit-learn/issues/13460
+        # To install pip install --pre -f https://sklearn-nightly.scdn8.secure.raxcdn.com scikit-learn
+
         reg.fit(feat_mat, self.calc_logits(responsibilities), sample_weights)
         return reg.coef_, reg.intercept_
 
-    def _calc_log_likelihood(self, left_feat: np.ndarray, right_feat: np.ndarray,
-                             labels: Sequence[bool]) -> np.ndarray:
+    def _calc_log_likelihood(self, left_feat: Matrix, right_feat: Matrix,
+                             labels: np.array) -> Matrix:
         """Return log likelihood.
         positive label: log(outcome_probs)
         negative label: log(1-outcome_probs)
@@ -195,18 +198,23 @@ class RegressionEM(BaseEstimator):
         return positive_sample_log_lh + negative_sample_log_lh
 
     # def fit(self, left_feat: np.ndarray, right_feat: np.ndarray, labels: np.ndarray) -> None:
-    def fit(self, X, y) -> None:
+    def fit(self, X: Matrix, y: np.array) -> None:
         """Estimate regression EM params.
 
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
                   Feature matrix derived from concatenating left latent features with right latent features.
         :param y: array-like of shape (n_samples,)
-                  Sequence of integer labels indicating each sample is positive or negative.
+                  Sequence of labels indicating each sample is positive or negative.
         """
         # separate dataset with index.
-        left_feat, right_feat = np.hsplit(X, [self.split_index])
+        if sp.issparse(X):
+            left_feat = X[:, 0:self.split_index]
+            right_feat = X[:, self.split_index:]
+        else:
+            left_feat, right_feat = np.hsplit(X, [self.split_index])
+
         # convert y to boolean
-        labels = self.int_to_bool(y)
+        labels = self.binary_to_bool(y)
 
         # Initialize params (feature weight, intercept).
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
@@ -220,7 +228,7 @@ class RegressionEM(BaseEstimator):
         sample_weights = None
         if self.class_weights == 'balanced':
             pos_ratio = np.count_nonzero(y) / y.size
-            sample_weights = [1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels]
+            sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
 
         for epoch in range(self.max_iter):
             # Update left latent params
@@ -242,7 +250,7 @@ class RegressionEM(BaseEstimator):
         self.left_params = best_left_params
         self.right_params = best_right_params
 
-    def predict_proba(self, X) -> np.ndarray:
+    def predict_proba(self, X: Matrix) -> Matrix:
         """Return predicted probabilities.
 
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
@@ -250,12 +258,16 @@ class RegressionEM(BaseEstimator):
         :return: Predicted probabilities.
         """
         # separate dataset with index
-        left_feat, right_feat = np.hsplit(X, [self.split_index])
+        if sp.issparse(X):
+            left_feat = X[:, 0:self.split_index]
+            right_feat = X[:, self.split_index:]
+        else:
+            left_feat, right_feat = np.hsplit(X, [self.split_index])
 
         return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
             self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: Matrix) -> Matrix:
         """Return predicted labels.
 
         :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
@@ -264,7 +276,11 @@ class RegressionEM(BaseEstimator):
         """
 
         # separate dataset
-        left_feat, right_feat = np.hsplit(X, [self.split_index])
+        if sp.issparse(X):
+            left_feat = X[:, 0:self.split_index]
+            right_feat = X[:, self.split_index:]
+        else:
+            left_feat, right_feat = np.hsplit(X, [self.split_index])
 
         # calculating probs
         probs = self.predict_proba(X)

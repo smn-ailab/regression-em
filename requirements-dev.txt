@@ -1,6 +1,7 @@
 numpy
 scipy
 sklearn
+--pre -f https://sklearn-nightly.scdn8.secure.raxcdn.com scikit-learn
 
 autopep8
 flake8
