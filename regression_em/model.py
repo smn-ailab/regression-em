@@ -1,10 +1,8 @@
 """Package to perform regression EM algorithm self.
 For the detail of this algortithm,
-["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.]
-(https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
+["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 """
 from random import random
-# from typing import Sequence, Tuple, Union
 from typing import Tuple, Union
 
 import numpy as np
@@ -14,8 +12,8 @@ from sklearn.base import BaseEstimator
 
 
 # Define type.
-Matrix = Union[np.ndarray, sp.csr_matrix, sp.csc_matrix]
-RegParam = Tuple[Matrix, float]
+Matrix = Union[np.ndarray, sp.csr_matrix]
+RegParam = Tuple[np.array, float]
 
 
 class RegressionEM(BaseEstimator):
@@ -24,8 +22,7 @@ class RegressionEM(BaseEstimator):
        Outcome = Left latent * Right latent
 
        For the detail of Regression EM algortithm,
-       ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.]
-       (https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
+       ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 
        :Parameters:
 
@@ -45,8 +42,8 @@ class RegressionEM(BaseEstimator):
        Note that these weights will be multiplied with sample_weight (passed
        through the fit method) if sample_weight is specified.
 
-       feature_index : int
-       the index to devide X into left latent features and right latent features.
+       split_index : int
+       The first column index of right latent feature.
 
        :Example:
 
@@ -63,7 +60,7 @@ class RegressionEM(BaseEstimator):
        [0.37910497, 0.44344932, 0.48168189, ...]])
        >>> X = np.hstack([left_feat, right_feat])
        >>> y = array([0, 0, 0, ...,  1, 0, 1])
-       >>> rem = RegressionEM(max_iter=100, with_sample_weights=True, alpha=1)
+       >>> rem = model.RegressionEM(max_iter=10, class_weights='balanced', alpha=1, split_index=100)
        >>> rem.fit(X, y, 100)
     """
 
@@ -77,31 +74,42 @@ class RegressionEM(BaseEstimator):
         self.split_index = split_index
 
     @staticmethod
-    def binary_to_bool(y: np.array) -> np.array:
+    def integers_to_bools(y: np.array) -> np.array:
         return [True if i > 0 else False for i in y]
 
     @staticmethod
-    def calc_probs(coef: Matrix, intercept: float, feat_mat: Matrix) -> Matrix:
+    def calc_probs(coef: np.array, intercept: float, feat_mat: Matrix) -> np.array:
         """Return probabilities calculated based on the definition of logistic regression.
 
-        :param coef: Coefficient vector of LR.
-        :param intercept: Intercept parameter of LR.
-        :param feat_vec: Feature vector.
-        :return: Sequence of probabilities.
+        :Parameters:
+
+        coef: Coefficient vector of LR.
+        intercept: Intercept parameter of LR.
+        feat_vec: Feature vector.
+
+        :return:
+
+        Sequence of probabilities.
         """
-        # 1 / exp(- (feature @ coef + intercept))
+
         return 1 / (1 + np.exp(- feat_mat @ coef - intercept))
 
-    def calc_logits(self, probs: Matrix) -> Matrix:
+    def calc_logits(self, probs: np.array) -> np.array:
         """Return logits calculated from probability array.
 
-        :param probs: Probability array to be converted to logists.
-        :param epsilon: Tiny value for clipping.
-        :return: Logist arrray.
+        :Parameters:
+
+        probs: Probability array to be converted to logists.
+        epsilon: Tiny value for clipping.
+
+        :return:
+
+        Logist arrray.
         """
+
         # Perform clipping to avoid log(0) and zero division.
         if sp.issparse(probs):
-            clipped = probs.todense()
+            clipped = probs.A()
         else:
             clipped = probs
         clipped[clipped == 0] = self.epsilon
@@ -112,12 +120,18 @@ class RegressionEM(BaseEstimator):
     @staticmethod
     def calc_responsibility(target_prob: float, ref_prob: float, is_positive: bool) -> float:
         """Return responsibility to be used in EM algorithm.
-        For detail, see eq.1 of [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 
-        :param target_prob: Probability calculated from the parameters to be updated.
-        :param ref_prob: Reference probability.
-        :param is_positive: If True, the sample has a positive label.
-        :return: Responsibility.
+        For detail, see eq.1 of (https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf).
+
+        :Parameters:
+
+        target_prob: Probability calculated from the parameters to be updated.
+        ref_prob: Reference probability.
+        is_positive: If True, the sample has a positive label.
+
+        :return:
+
+        Responsibility.
         """
 
         if is_positive or target_prob == ref_prob == 1:
@@ -127,18 +141,24 @@ class RegressionEM(BaseEstimator):
 
     def update_responsibilities(self, target_params: RegParam, target_feat: Matrix,
                                 ref_params: RegParam, ref_feat: Matrix,
-                                labels: np.array) -> Matrix:
+                                labels: np.array) -> np.array:
         """Return responsibilities based on M-step parameters.
 
         .. Note::
             target_params and ref_params must be (weight vector, intercept).
 
-        :param target_params: Regression params corresponding to the latent factor to be updated.
-        :param target_feat: Feature matrix corresponding to the latent factor to be updated.
-        :param ref_params: Regression params corresponding to the refered latent factor.
-        :param ref_feat: Feature matrix corresponding to the refered latent factor.
-        :param labels: Sequence of boolean indicating each sample is positivei or negative.
-        :return: List of responsibilities.
+
+        :Parameters:
+
+        target_params: Regression params corresponding to the latent factor to be updated.
+        target_feat: Feature matrix corresponding to the latent factor to be updated.
+        ref_params: Regression params corresponding to the refered latent factor.
+        ref_feat: Feature matrix corresponding to the refered latent factor.
+        labels: Sequence of boolean indicating each sample is positivei or negative.
+
+        :return:
+
+        List of responsibilities.
         """
         # The format of params must be (coef vector, intercept).
         # Calculating ref prob. with updated ref params for updating target param
@@ -147,16 +167,22 @@ class RegressionEM(BaseEstimator):
 
         return np.vectorize(self.calc_responsibility)(target_probs, ref_probs, labels)
 
-    def update_params(self, feat_mat: Matrix, responsibilities: Matrix, sample_weights) -> RegParam:
+    def update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights) -> RegParam:
         """Return fitted Logistic Regression params.
-        For detail, see eq.2 of [https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf].
 
-        :param feat_mat: Feature matrix to be used to learn responsibility.
-        :param responsibilities: Sequence of responsibilities calculated at E-step.
-        :param sample_weights: Sequence of Weights for treating imbalance dataset.
+        For detail, see eq.2 of (https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf).
+
+        :Parameters:
+
+        feat_mat: Feature matrix to be used to learn responsibility.
+        responsibilities: Sequence of responsibilities calculated at E-step.
+        sample_weights: Sequence of Weights for treating imbalance dataset.
         for positive data: 1/n-positive data
         for negative data: 1/n-negative data
-        :return: Updated M-step params.
+
+        :return:
+
+        Updated M-step params.
         """
         if self._alpha:
             reg = Ridge(alpha=self._alpha)
@@ -171,15 +197,20 @@ class RegressionEM(BaseEstimator):
         return reg.coef_, reg.intercept_
 
     def _calc_log_likelihood(self, left_feat: Matrix, right_feat: Matrix,
-                             labels: np.array) -> Matrix:
+                             labels: np.array) -> np.array:
         """Return log likelihood.
         positive label: log(outcome_probs)
         negative label: log(1-outcome_probs)
 
-        :param left_feat: Feature matrix to be used to learn left params.
-        :param right_feat: Feature matrix to be used to learn  parightrams.
-        :param labels: Sequence of boolean indicating each sample is positivei or negative.
-        :return: log_likelihood
+        :Parameters:
+
+        left_feat: Feature matrix to be used to learn left params.
+        right_feat: Feature matrix to be used to learn  parightrams.
+        labels: Sequence of boolean indicating each sample is positivei or negative.
+
+        :return:
+
+        log_likelihood
         """
         # Calculate predicted probabilities of outcome.
         outcome_probs = self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
@@ -201,10 +232,12 @@ class RegressionEM(BaseEstimator):
     def fit(self, X: Matrix, y: np.array) -> None:
         """Estimate regression EM params.
 
-        :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
-                  Feature matrix derived from concatenating left latent features with right latent features.
-        :param y: array-like of shape (n_samples,)
-                  Sequence of labels indicating each sample is positive or negative.
+        :Parameters:
+
+        X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
+            Feature matrix derived from concatenating left latent features with right latent features.
+        y: array-like of shape (n_samples,)
+            Sequence of labels indicating each sample is positive or negative.
         """
         # separate dataset with index.
         if sp.issparse(X):
@@ -214,7 +247,7 @@ class RegressionEM(BaseEstimator):
             left_feat, right_feat = np.hsplit(X, [self.split_index])
 
         # convert y to boolean
-        labels = self.binary_to_bool(y)
+        labels = self.integers_to_bools(y)
 
         # Initialize params (feature weight, intercept).
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
@@ -250,16 +283,21 @@ class RegressionEM(BaseEstimator):
         self.left_params = best_left_params
         self.right_params = best_right_params
 
-    def predict_proba(self, X: Matrix) -> Matrix:
+    def predict_proba(self, X: Matrix) -> np.array:
         """Return predicted probabilities.
 
-        :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
-                  Feature matrix derived from concatenating left latent features with right latent features.
-        :return: Predicted probabilities.
+        :Parameters:
+
+        X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
+            Feature matrix derived from concatenating left latent features with right latent features.
+
+        :return:
+
+        Predicted probabilities.
         """
         # separate dataset with index
         if sp.issparse(X):
-            left_feat = X[:, 0:self.split_index]
+            left_feat = X[:, :self.split_index]
             right_feat = X[:, self.split_index:]
         else:
             left_feat, right_feat = np.hsplit(X, [self.split_index])
@@ -267,12 +305,17 @@ class RegressionEM(BaseEstimator):
         return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
             self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
-    def predict(self, X: Matrix) -> Matrix:
+    def predict(self, X: Matrix) -> np.array:
         """Return predicted labels.
 
-        :param X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
-                  Feature matrix derived from concatenating left latent features with right latent features.
-        :return: Predicted labels.
+        :Parameters:
+
+        X: {array-like, sparse matrix} of shape (n_samples, n_left and right latent features)
+            Feature matrix derived from concatenating left latent features with right latent features.
+
+        :return:
+
+        Predicted labels.
         """
 
         # separate dataset
