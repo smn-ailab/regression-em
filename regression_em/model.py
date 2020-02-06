@@ -1,4 +1,5 @@
-"""Package to perform regression EM algorithm self.
+"""Package to perform Regression EM algorithm.
+
 For the detail of this algortithm,
 ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 """
@@ -64,14 +65,14 @@ class RegressionEM(BaseEstimator):
        >>> rem.fit(X, y, 100)
     """
 
-    def __init__(self, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, class_weights: str = None, split_index: int = 0) -> None:
+    def __init__(self, split_index: int, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, class_weights: str = None) -> None:
         """Initialize hyper parameters."""
 
+        self._split_index = split_index
         self._alpha = alpha
-        self.max_iter = max_iter
-        self.epsilon = epsilon
-        self.class_weights = class_weights
-        self.split_index = split_index
+        self._max_iter = max_iter
+        self._epsilon = epsilon
+        self._class_weights = class_weights
 
     @staticmethod
     def integers_to_bools(y: np.array) -> np.array:
@@ -109,11 +110,11 @@ class RegressionEM(BaseEstimator):
 
         # Perform clipping to avoid log(0) and zero division.
         if sp.issparse(probs):
-            clipped = probs.A()
+            clipped = probs.A
         else:
             clipped = probs
-        clipped[clipped == 0] = self.epsilon
-        clipped[clipped == 1] = 1 - self.epsilon
+        clipped[clipped == 0] = self._epsilon
+        clipped[clipped == 1] = 1 - self._epsilon
 
         return np.log(clipped / (1 - clipped))
 
@@ -121,7 +122,7 @@ class RegressionEM(BaseEstimator):
     def calc_responsibility(target_prob: float, ref_prob: float, is_positive: bool) -> float:
         """Return responsibility to be used in EM algorithm.
 
-        For detail, see eq.1 of (https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf).
+        For detail, see eq.1 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf.
 
         :Parameters:
 
@@ -170,7 +171,7 @@ class RegressionEM(BaseEstimator):
     def update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights) -> RegParam:
         """Return fitted Logistic Regression params.
 
-        For detail, see eq.2 of (https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf).
+        For detail, see eq.2 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf.
 
         :Parameters:
 
@@ -218,12 +219,12 @@ class RegressionEM(BaseEstimator):
 
         # Calculate log likelihood with positive samples only.
         positive_sample_probs = outcome_probs[labels]  # Get list of probs whose sample labels are True.
-        positive_sample_probs[positive_sample_probs == 0] = self.epsilon  # Clip probs to avoid log(0).
+        positive_sample_probs[positive_sample_probs == 0] = self._epsilon  # Clip probs to avoid log(0).
         positive_sample_log_lh = np.sum(np.log(positive_sample_probs))
 
         # Apply the same procedure to negative ones.
         negative_sample_probs = outcome_probs[np.logical_not(labels)]
-        negative_sample_probs[negative_sample_probs == 1] = 1 - self.epsilon
+        negative_sample_probs[negative_sample_probs == 1] = 1 - self._epsilon
         negative_sample_log_lh = np.sum(np.log(1 - negative_sample_probs))
 
         return positive_sample_log_lh + negative_sample_log_lh
@@ -241,10 +242,10 @@ class RegressionEM(BaseEstimator):
         """
         # separate dataset with index.
         if sp.issparse(X):
-            left_feat = X[:, 0:self.split_index]
-            right_feat = X[:, self.split_index:]
+            left_feat = X[:, 0:self._split_index]
+            right_feat = X[:, self._split_index:]
         else:
-            left_feat, right_feat = np.hsplit(X, [self.split_index])
+            left_feat, right_feat = np.hsplit(X, [self._split_index])
 
         # convert y to boolean
         labels = self.integers_to_bools(y)
@@ -259,11 +260,11 @@ class RegressionEM(BaseEstimator):
         best_right_params = self.right_params
 
         sample_weights = None
-        if self.class_weights == 'balanced':
+        if self._class_weights == 'balanced':
             pos_ratio = np.count_nonzero(y) / y.size
             sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
 
-        for epoch in range(self.max_iter):
+        for epoch in range(self._max_iter):
             # Update left latent params
             left_responsibilities = self.update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
             self.left_params = self.update_params(left_feat, left_responsibilities, sample_weights)
@@ -297,10 +298,10 @@ class RegressionEM(BaseEstimator):
         """
         # separate dataset with index
         if sp.issparse(X):
-            left_feat = X[:, :self.split_index]
-            right_feat = X[:, self.split_index:]
+            left_feat = X[:, :self._split_index]
+            right_feat = X[:, self._split_index:]
         else:
-            left_feat, right_feat = np.hsplit(X, [self.split_index])
+            left_feat, right_feat = np.hsplit(X, [self._split_index])
 
         return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
             self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
@@ -320,10 +321,10 @@ class RegressionEM(BaseEstimator):
 
         # separate dataset
         if sp.issparse(X):
-            left_feat = X[:, 0:self.split_index]
-            right_feat = X[:, self.split_index:]
+            left_feat = X[:, 0:self._split_index]
+            right_feat = X[:, self._split_index:]
         else:
-            left_feat, right_feat = np.hsplit(X, [self.split_index])
+            left_feat, right_feat = np.hsplit(X, [self._split_index])
 
         # calculating probs
         probs = self.predict_proba(X)
