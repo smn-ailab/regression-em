@@ -19,6 +19,7 @@
 			"--max-line-length=200"
 		],
 		"python.jediEnabled": false,
+		"python.linting.pydocstyleEnabled": true,
 		"python.linting.pylintEnabled": false,
 		"python.linting.flake8Args": [
 			"--max-line-length=200"
