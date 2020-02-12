@@ -20,54 +20,53 @@ RegParam = Tuple[np.array, float]
 class RegressionEM(BaseEstimator):
     """Regression EM can estimate latent factors based on below model.
 
-       Outcome = Left latent * Right latent
+    Outcome = Left latent * Right latent
 
-       For the detail of Regression EM algortithm,
-       ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
+    For the detail of Regression EM algortithm,
+    ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 
-       :Parameters:
+    :Parameters:
 
-       alpha : float, default=1
-       Weights associated with regularization term
+    alpha : float, default=1
+    Weights associated with regularization term
 
-       max_iter : int, default=100
-       Maximum number of iterations taken for the solvers to converge
+    max_iter : int, default=100
+    Maximum number of iterations taken for the solvers to converge
 
-       epsilon : float, default=1e-10
-       Tiny value to avoid division by zero.
+    epsilon : float, default=1e-10
+    Tiny value to avoid division by zero.
 
-       class_weights : 'balanced', default = None
-       The "balanced" mode uses the values of y to automatically adjust
-       weights inversely proportional to class frequencies in the input data
-       as ``n_samples / (n_classes * np.bincount(y))``
-       Note that these weights will be multiplied with sample_weight (passed
-       through the fit method) if sample_weight is specified.
+    class_weights : 'balanced', default = None
+    The "balanced" mode uses the values of y to automatically adjust
+    weights inversely proportional to class frequencies in the input data
+    as ``n_samples / (n_classes * np.bincount(y))``
+    Note that these weights will be multiplied with sample_weight (passed
+    through the fit method) if sample_weight is specified.
 
-       split_index : int
-       The first column index of right latent feature.
+    split_index : int
+    The first column index of right latent feature.
 
-       :Example:
+    :Example:
 
-       >>> import RegressionEM
-       >>> left_feat = array([[0.17843638, 0.09311004, 0.89600447, ...],
-       [0.55349066, 0.83427622, 0.34841103, ...],
-       ...,
-       [0.22199485, 0.19540406, 0.02678277, ...],
-       [0.62612729, 0.71996384, 0.66445362, ...]])
-       >>> right_feat = array([[0.6177678 , 0.69322733, 0.95146727, ...],
-       [0.96681348, 0.79037145, 0.45834361, ...],
-       ...,
-       [0.64773992, 0.86541352, 0.04755084, ...],
-       [0.37910497, 0.44344932, 0.48168189, ...]])
-       >>> X = np.hstack([left_feat, right_feat])
-       >>> y = array([0, 0, 0, ...,  1, 0, 1])
-       >>> rem = model.RegressionEM(max_iter=10, class_weights='balanced', alpha=1, split_index=100)
-       >>> rem.fit(X, y, 100)
+    >>> import RegressionEM
+    >>> left_feat = array([[0.17843638, 0.09311004, 0.89600447, ...],
+    [0.55349066, 0.83427622, 0.34841103, ...],
+    ...,
+    [0.22199485, 0.19540406, 0.02678277, ...],
+    [0.62612729, 0.71996384, 0.66445362, ...]])
+    >>> right_feat = array([[0.6177678 , 0.69322733, 0.95146727, ...],
+    [0.96681348, 0.79037145, 0.45834361, ...],
+    ...,
+    [0.64773992, 0.86541352, 0.04755084, ...],
+    [0.37910497, 0.44344932, 0.48168189, ...]])
+    >>> X = np.hstack([left_feat, right_feat])
+    >>> y = array([0, 0, 0, ...,  1, 0, 1])
+    >>> rem = model.RegressionEM(max_iter=10, class_weights='balanced', alpha=1, split_index=100)
+    >>> rem.fit(X, y, 100)
     """
 
     def __init__(self, split_index: int, alpha: float = 0, max_iter: int = 100, epsilon: float = 10 ** -10, class_weights: str = None) -> None:
         """Initialize hyper parameters."""
-
         self._split_index = split_index
         self._alpha = alpha
         self._max_iter = max_iter
@@ -76,6 +75,7 @@ class RegressionEM(BaseEstimator):
 
     @staticmethod
     def integers_to_bools(y: np.array) -> np.array:
+        """Convert the type of labels from integers to bools."""
         return [True if i > 0 else False for i in y]
 
     @staticmethod
@@ -92,7 +92,6 @@ class RegressionEM(BaseEstimator):
 
         Sequence of probabilities.
         """
-
         return 1 / (1 + np.exp(- feat_mat @ coef - intercept))
 
     def calc_logits(self, probs: np.array) -> np.array:
@@ -107,7 +106,6 @@ class RegressionEM(BaseEstimator):
 
         Logist arrray.
         """
-
         # Perform clipping to avoid log(0) and zero division.
         if sp.issparse(probs):
             clipped = probs.A
@@ -134,7 +132,6 @@ class RegressionEM(BaseEstimator):
 
         Responsibility.
         """
-
         if is_positive or target_prob == ref_prob == 1:
             return 1.0
         else:
@@ -200,6 +197,7 @@ class RegressionEM(BaseEstimator):
     def _calc_log_likelihood(self, left_feat: Matrix, right_feat: Matrix,
                              labels: np.array) -> np.array:
         """Return log likelihood.
+
         positive label: log(outcome_probs)
         negative label: log(1-outcome_probs)
 
@@ -318,14 +316,6 @@ class RegressionEM(BaseEstimator):
 
         Predicted labels.
         """
-
-        # separate dataset
-        if sp.issparse(X):
-            left_feat = X[:, 0:self._split_index]
-            right_feat = X[:, self._split_index:]
-        else:
-            left_feat, right_feat = np.hsplit(X, [self._split_index])
-
         # calculating probs
         probs = self.predict_proba(X)
         return np.array([p >= 0.5 for p in probs])
