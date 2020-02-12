@@ -319,13 +319,6 @@ class RegressionEM(BaseEstimator):
         Predicted labels.
         """
 
-        # separate dataset
-        if sp.issparse(X):
-            left_feat = X[:, 0:self._split_index]
-            right_feat = X[:, self._split_index:]
-        else:
-            left_feat, right_feat = np.hsplit(X, [self._split_index])
-
         # calculating probs
         probs = self.predict_proba(X)
         return np.array([p >= 0.5 for p in probs])
