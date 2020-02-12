@@ -12,7 +12,7 @@ def read_requirements():
 
 
 setup(
-    name="regressionem",
+    name="regression_em",
     version="0.0.1",
     author="SMN a.i lab.",
     author_email="suguru_yaginuma@so-netmedia.jp",
