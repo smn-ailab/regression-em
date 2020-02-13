@@ -18,7 +18,7 @@ setup(
     author_email="suguru_yaginuma@so-netmedia.jp",
     description="A small example package",
     url="https://github.com/smn-ailab/regression-em/",
-    packages=find_packages("regression_em"),
+    packages=find_packages(exclude=('tests', 'docs')),
     install_requires=read_requirements(),
     classifiers=[
         "Programming Language :: Python :: 3",

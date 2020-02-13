@@ -3,8 +3,6 @@
 	"context": "..",
 	"dockerFile": "Dockerfile",
 	"postCreateCommand": "pip install -r requirements.txt -r pip install -r requirements-dev.txt",
-	// Use 'settings' to set *default* container specific settings.json values on container create.
-	// You can edit these settings after create using File > Preferences > Settings > Remote.
 	"settings": {
 		"autoDocstring.docstringFormat": "sphinx",
 		"autoDocstring.guessTypes": false,

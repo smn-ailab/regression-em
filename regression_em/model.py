@@ -74,12 +74,12 @@ class RegressionEM(BaseEstimator):
         self._class_weights = class_weights
 
     @staticmethod
-    def integers_to_bools(y: np.array) -> np.array:
+    def _integers_to_bools(y: np.array) -> np.array:
         """Convert the type of labels from integers to bools."""
         return [True if i > 0 else False for i in y]
 
     @staticmethod
-    def calc_probs(coef: np.array, intercept: float, feat_mat: Matrix) -> np.array:
+    def _calc_probs(coef: np.array, intercept: float, feat_mat: Matrix) -> np.array:
         """Return probabilities calculated based on the definition of logistic regression.
 
         :Parameters:
@@ -94,7 +94,7 @@ class RegressionEM(BaseEstimator):
         """
         return 1 / (1 + np.exp(- feat_mat @ coef - intercept))
 
-    def calc_logits(self, probs: np.array) -> np.array:
+    def _calc_logits(self, probs: np.array) -> np.array:
         """Return logits calculated from probability array.
 
         :Parameters:
@@ -117,7 +117,7 @@ class RegressionEM(BaseEstimator):
         return np.log(clipped / (1 - clipped))
 
     @staticmethod
-    def calc_responsibility(target_prob: float, ref_prob: float, is_positive: bool) -> float:
+    def _calc_responsibility(target_prob: float, ref_prob: float, is_positive: bool) -> float:
         """Return responsibility to be used in EM algorithm.
 
         For detail, see eq.1 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf.
@@ -137,9 +137,9 @@ class RegressionEM(BaseEstimator):
         else:
             return (target_prob * (1 - ref_prob)) / (1 - target_prob * ref_prob)
 
-    def update_responsibilities(self, target_params: RegParam, target_feat: Matrix,
-                                ref_params: RegParam, ref_feat: Matrix,
-                                labels: np.array) -> np.array:
+    def _update_responsibilities(self, target_params: RegParam, target_feat: Matrix,
+                                 ref_params: RegParam, ref_feat: Matrix,
+                                 labels: np.array) -> np.array:
         """Return responsibilities based on M-step parameters.
 
         .. Note::
@@ -160,12 +160,12 @@ class RegressionEM(BaseEstimator):
         """
         # The format of params must be (coef vector, intercept).
         # Calculating ref prob. with updated ref params for updating target param
-        target_probs = self.calc_probs(target_params[0], target_params[1], target_feat)
-        ref_probs = self.calc_probs(ref_params[0], ref_params[1], ref_feat)
+        target_probs = self._calc_probs(target_params[0], target_params[1], target_feat)
+        ref_probs = self._calc_probs(ref_params[0], ref_params[1], ref_feat)
 
-        return np.vectorize(self.calc_responsibility)(target_probs, ref_probs, labels)
+        return np.vectorize(self._calc_responsibility)(target_probs, ref_probs, labels)
 
-    def update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights) -> RegParam:
+    def _update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights) -> RegParam:
         """Return fitted Logistic Regression params.
 
         For detail, see eq.2 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf.
@@ -191,7 +191,7 @@ class RegressionEM(BaseEstimator):
         # https://github.com/scikit-learn/scikit-learn/issues/13460
         # To install pip install --pre -f https://sklearn-nightly.scdn8.secure.raxcdn.com scikit-learn
 
-        reg.fit(feat_mat, self.calc_logits(responsibilities), sample_weights)
+        reg.fit(feat_mat, self._calc_logits(responsibilities), sample_weights)
         return reg.coef_, reg.intercept_
 
     def _calc_log_likelihood(self, left_feat: Matrix, right_feat: Matrix,
@@ -212,8 +212,8 @@ class RegressionEM(BaseEstimator):
         log_likelihood
         """
         # Calculate predicted probabilities of outcome.
-        outcome_probs = self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
-            self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
+        outcome_probs = self._calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
+            self._calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
         # Calculate log likelihood with positive samples only.
         positive_sample_probs = outcome_probs[labels]  # Get list of probs whose sample labels are True.
@@ -246,7 +246,7 @@ class RegressionEM(BaseEstimator):
             left_feat, right_feat = np.hsplit(X, [self._split_index])
 
         # convert y to boolean
-        labels = self.integers_to_bools(y)
+        labels = self._integers_to_bools(y)
 
         # Initialize params (feature weight, intercept).
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
@@ -264,12 +264,12 @@ class RegressionEM(BaseEstimator):
 
         for epoch in range(self._max_iter):
             # Update left latent params
-            left_responsibilities = self.update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
-            self.left_params = self.update_params(left_feat, left_responsibilities, sample_weights)
+            left_responsibilities = self._update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
+            self.left_params = self._update_params(left_feat, left_responsibilities, sample_weights)
 
             # Update right latent params
-            right_responsibilities = self.update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, labels)
-            self.right_params = self.update_params(right_feat, right_responsibilities, sample_weights)
+            right_responsibilities = self._update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, labels)
+            self.right_params = self._update_params(right_feat, right_responsibilities, sample_weights)
 
             # calculating log likelihood and judging convergence
             self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, labels))
@@ -301,8 +301,8 @@ class RegressionEM(BaseEstimator):
         else:
             left_feat, right_feat = np.hsplit(X, [self._split_index])
 
-        return self.calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
-            self.calc_probs(self.right_params[0], self.right_params[1], right_feat)
+        return self._calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
+            self._calc_probs(self.right_params[0], self.right_params[1], right_feat)
 
     def predict(self, X: Matrix) -> np.array:
         """Return predicted labels.
