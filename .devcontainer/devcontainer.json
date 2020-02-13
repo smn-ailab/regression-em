@@ -2,7 +2,7 @@
 	"name": "RegressionEM",
 	"context": "..",
 	"dockerFile": "Dockerfile",
-	"postCreateCommand": "pip install -r requirements.txt -r pip install -r requirements-dev.txt",
+	"postCreateCommand": "pip install -r requirements.txt -r requirements-dev.txt",
 	"settings": {
 		"autoDocstring.docstringFormat": "sphinx",
 		"autoDocstring.guessTypes": false,

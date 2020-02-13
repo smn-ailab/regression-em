@@ -20,3 +20,5 @@ ENV LLVM_CONFIG=/usr/lib/llvm-8/bin/llvm-config
 # See https://stackoverflow.com/a/47652542 .
 RUN mkdir -p -m 0600 ~/.ssh \
   && ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+RUN pip install --upgrade pip
