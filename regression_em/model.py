@@ -152,7 +152,7 @@ class RegressionEM(BaseEstimator):
         target_feat: Feature matrix corresponding to the latent factor to be updated.
         ref_params: Regression params corresponding to the refered latent factor.
         ref_feat: Feature matrix corresponding to the refered latent factor.
-        labels: Sequence of boolean indicating each sample is positivei or negative.
+        labels: Sequence of boolean indicating each sample is positive or negative.
 
         :return:
 
