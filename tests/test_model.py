@@ -6,6 +6,7 @@ import scipy.sparse as sp
 
 
 class TestRegressionEM():
+    """Check thata the model can work."""
 
     def setup(self):
         """
@@ -32,7 +33,7 @@ class TestRegressionEM():
         self.y_multi = [0, 1, 2]
 
     def test_integers_to_bools(self):
-        """Check that integers_to_bools func is able to work in the following cases.
+        """Test to convert  in the following cases.
 
         1. 0/1 label
         2. multi class label
@@ -41,7 +42,7 @@ class TestRegressionEM():
         assert ans == self.rem._integers_to_bools(self.y) and ans == self.rem._integers_to_bools(self.y_multi)
 
     def test_calc_probs(self):
-        """Check that the model is able to calculate probabilities in the following input cases.
+        """Test to calculate probabilities in the following input cases.
 
         1. np.array
         2. csr_matrix
@@ -54,7 +55,7 @@ class TestRegressionEM():
         npt.assert_almost_equal(ans, self.rem._calc_probs(coef, intercept, self.X_sp), decimal=5)
 
     def test_calc_logits(self):
-        """Check that the model is able to calc logits in the following cases.
+        """Test to calculating logits in the following cases.
 
         1. prob =! 0 and prob =! 1
         2. prob = 0
@@ -66,7 +67,7 @@ class TestRegressionEM():
         npt.assert_almost_equal(ans, self.rem._calc_logits(prob), decimal=7)
 
     def test_calc_responsibility(self):
-        """Check that the model is able to calc responsibilities in the following cases.
+        """Test to calculate responsibilities in the following cases.
 
         1. target_param =! 1 or ref_param =! 1 and label = False
         2. target_param = 1 and ref_param = 1 and label = False -> 1 (avoid zero devision)
@@ -81,8 +82,18 @@ class TestRegressionEM():
             assert ans[i] == self.rem._calc_responsibility(target_prob[i], ref_prob[i], is_positive[i])
 
     def test_update_responsibilities(self):
+        """Test to calculate.
+
+        1. target_param =! 1 or ref_param =! 1 and label = False
+        2. target_param = 1 and ref_param = 1 and label = False -> 1 (avoid zero devision)
+        3. label = True ->
         """
-        """
+        left_param = (np.array([1, 1]), 0.5)
+        right_param = (np.array([1, 1]), 0.5)
+        label = np.array([False, True, True])
+        ans = np.array([0.4498160735, 1, 1])
+        npt.assert_almost_equal(ans, self.rem._update_responsibilities(left_param, self.left_feat, right_param, self.right_feat, label), decimal=5)
+        npt.assert_almost_equal(ans, self.rem._update_responsibilities(left_param, self.left_feat_sp, right_param, self.right_feat_sp, label), decimal=5)
 
     def test_update_params():
         """
