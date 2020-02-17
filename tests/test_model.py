@@ -38,7 +38,6 @@ class TestRegressionEM():
         2. multi class label
         """
         ans = [False, True, True]
-
         assert ans == self.rem._integers_to_bools(self.y) and ans == self.rem._integers_to_bools(self.y_multi)
 
     def test_calc_probs(self):
@@ -66,11 +65,22 @@ class TestRegressionEM():
 
         npt.assert_almost_equal(ans, self.rem._calc_logits(prob), decimal=7)
 
-    def test_calc_responsibility():
-        """
-        """
+    def test_calc_responsibility(self):
+        """Check that the model is able to calc responsibilities in the following cases.
 
-    def test_update_responsibilities():
+        1. target_param =! 1 or ref_param =! 1 and label = False
+        2. target_param = 1 and ref_param = 1 and label = False -> 1 (avoid zero devision)
+        3. label = True -> 1
+        (see eq.1 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
+        """
+        target_prob = [0.4, 1, 0.1]
+        ref_prob = [0.5, 1, 0.9]
+        is_positive = [False, False, True]
+        ans = [0.25, 1, 1]
+        for i in range(len(target_prob)):
+            assert ans[i] == self.rem._calc_responsibility(target_prob[i], ref_prob[i], is_positive[i])
+
+    def test_update_responsibilities(self):
         """
         """
 
