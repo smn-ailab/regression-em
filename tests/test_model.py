@@ -5,7 +5,6 @@ from regression_em import RegressionEM
 import numpy as np
 import numpy.testing as npt
 import scipy.sparse as sp
-from scipy import optimize
 
 # Define type.
 Matrix = Union[np.ndarray, sp.csr_matrix]
@@ -52,11 +51,11 @@ class TestRegressionEM():
         2. csr_matrix
         """
 
-        coef = np.array([1, 1, 1, 1])
+        coef = np.array([1, 1])
         intercept = 0.5
-        ans = np.array([0.924142, 0.924142, 0.989013])
-        npt.assert_almost_equal(ans, self.rem._calc_probs(coef, intercept, self.X), decimal=5)
-        npt.assert_almost_equal(ans, self.rem._calc_probs(coef, intercept, self.X_sp), decimal=5)
+        ans = np.array([0.817574, 0.817574, 0.924142])
+        npt.assert_almost_equal(ans, self.rem._calc_probs(coef, intercept, self.left_feat), decimal=5)
+        npt.assert_almost_equal(ans, self.rem._calc_probs(coef, intercept, self.left_feat_sp), decimal=5)
 
     def test_calc_logits(self):
         """Test to calculating logits in the following cases.
@@ -105,16 +104,36 @@ class TestRegressionEM():
 
     def test_update_params():
         """
+
         """
 
     def test_calc_log_likelihood(self):
+        """Test that the model is able to handle 2 exceptions.
+
+        1.
+        2.
         """
-        """
-        left_feat = np.array([[0, 0], [0, 0], [0, 0]])
-        right_feat = np.array([[0, 0], [0, 0], [0, 0]])
-        labels = [1, 1, 1]
-        ans = 3 * np.log(self.rem._epsilon)
-        assert ans == self.rem._calc_log_likelihood(left_feat, right_feat, labels)
+        # params for the case that prob = 0 and label = False.
+        left_param = (np.array([1, 1]), 0.5)
+        right_param = (np.array([1, 1]), 0.5)
+        labels = np.array([True, True, False])
+        ans = -2.73007
+
+        # params for the case that prob = 0 and label = False.
+        left_param_zero = (np.array([-10000, -10000]), -10000)
+        right_param_zero = (np.array([-10000, -10000]), -10000)
+        labels_zero = np.array([True, True, True])
+
+        # params for the case that prob = 0 and label = True.
+        left_param_one = (np.array([10000, 10000]), 10000)
+        right_param_one = (np.array([10000, 10000]), 10000)
+        labels_one = np.array([False, False, False])
+
+        ans_exceptions = 3 * np.log(self.rem._epsilon)
+
+        npt.assert_almost_equal(ans, self.rem._calc_log_likelihood(left_param, self.left_feat, right_param, self.right_feat, labels), decimal=4)
+        npt.assert_almost_equal(ans_exceptions, self.rem._calc_log_likelihood(left_param_zero, self.left_feat, right_param_zero, self.right_feat, labels_zero), decimal=5)
+        npt.assert_almost_equal(ans_exceptions, self.rem._calc_log_likelihood(left_param_one, self.left_feat, right_param_one, self.right_feat, labels_one), decimal=5)
 
     def check_predictions(self, X: Matrix, y: np.array):
         """Check that the model is able to fit the classification data."""

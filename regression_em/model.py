@@ -194,7 +194,7 @@ class RegressionEM(BaseEstimator):
         reg.fit(feat_mat, self._calc_logits(responsibilities), sample_weights)
         return reg.coef_, reg.intercept_
 
-    def _calc_log_likelihood(self, left_param: np.array, left_feat: Matrix, right_param: np.array, right_feat: Matrix,
+    def _calc_log_likelihood(self, left_params: np.array, left_feat: Matrix, right_params: np.array, right_feat: Matrix,
                              labels: np.array) -> np.array:
         """Return log likelihood.
 
@@ -212,8 +212,8 @@ class RegressionEM(BaseEstimator):
         log_likelihood
         """
         # Calculate predicted probabilities of outcome.
-        outcome_probs = self._calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
-            self._calc_probs(self.right_params[0], self.right_params[1], right_feat)
+        outcome_probs = self._calc_probs(left_params[0], left_params[1], left_feat) * \
+            self._calc_probs(right_params[0], right_params[1], right_feat)
 
         # Calculate log likelihood with positive samples only.
         positive_sample_probs = outcome_probs[labels]  # Get list of probs whose sample labels are True.
