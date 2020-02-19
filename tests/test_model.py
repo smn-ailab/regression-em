@@ -1,8 +1,14 @@
 """test for RegressionEM."""
+from typing import Union
+
 from regression_em import RegressionEM
 import numpy as np
 import numpy.testing as npt
 import scipy.sparse as sp
+from scipy import optimize
+
+# Define type.
+Matrix = Union[np.ndarray, sp.csr_matrix]
 
 
 class TestRegressionEM():
@@ -10,8 +16,6 @@ class TestRegressionEM():
 
     def setup(self):
         """
-        Check the
-
         :Parameters:
 
         X: {np.array}
@@ -22,15 +26,15 @@ class TestRegressionEM():
         y_multi: {np.array}
         Labels to check that the model can handle multilabel.
         """
-        self.rem = RegressionEM(split_index=100, max_iter=10, class_weights='balanced', alpha=1, epsilon=10**-10)
+        self.rem = RegressionEM(split_index=2, max_iter=10, class_weights='balanced', alpha=1, epsilon=10**-10)
         self.left_feat = np.array([[1, 0], [0, 1], [1, 1]])
         self.right_feat = np.array([[1, 0], [0, 1], [1, 1]])
         self.X = np.hstack([self.left_feat, self.right_feat])
         self.left_feat_sp = sp.csr_matrix(self.left_feat)
         self.right_feat_sp = sp.csr_matrix(self.right_feat)
         self.X_sp = sp.csr_matrix(self.X)
-        self.y = [0, 1, 1]
-        self.y_multi = [0, 1, 2]
+        self.y = np.array([0, 1, 1])
+        self.y_multi = np.array([0, 1, 2])
 
     def test_integers_to_bools(self):
         """Test to convert  in the following cases.
@@ -86,31 +90,45 @@ class TestRegressionEM():
 
         1. target_param =! 1 or ref_param =! 1 and label = False
         2. target_param = 1 and ref_param = 1 and label = False -> 1 (avoid zero devision)
-        3. label = True ->
+        3. label = True -> 1
         """
         left_param = (np.array([1, 1]), 0.5)
         right_param = (np.array([1, 1]), 0.5)
         label = np.array([False, True, True])
         ans = np.array([0.4498160735, 1, 1])
-        npt.assert_almost_equal(ans, self.rem._update_responsibilities(left_param, self.left_feat, right_param, self.right_feat, label), decimal=5)
-        npt.assert_almost_equal(ans, self.rem._update_responsibilities(left_param, self.left_feat_sp, right_param, self.right_feat_sp, label), decimal=5)
+        res = self.rem._update_responsibilities(left_param, self.left_feat, right_param, self.right_feat, label)
+        res_sp = self.rem._update_responsibilities(left_param, self.left_feat_sp, right_param, self.right_feat_sp, label)
+        npt.assert_almost_equal(ans[0], res[0], decimal=5)
+        npt.assert_almost_equal(ans[0], res_sp[0], decimal=5)
+        assert ans[1] == res[1] and ans[1] == res_sp[1]
+        assert ans[2] == res[2] and ans[2] == res_sp[2]
 
     def test_update_params():
         """
         """
 
-    def test__calc_log_likelihood():
+    def test_calc_log_likelihood(self):
         """
         """
+        left_param = (np.array([1, 1]), 0.5)
+        right_param = (np.array([1, 1]), 0.5)
+        ans = np.array([])
+        npt.assert_almost_equal(ans, self.rem._calc_log_likelihood(self.left_feat, self.right_feat, self.y), decimal=7)
+        npt.assert_almost_equal(ans, self.rem._calc_log_likelihood(self.left_feat_sp, self.right_feat_sp, self.y), decimal=7)
 
-    def test_fit():
-        """
-        """
+    def check_predictions(self, X: Matrix, y: np.array):
+        """Check that the model is able to fit the classification data."""
+        n_samples = len(y)
+        classes = np.unique(y)
 
-    def test_predict_proba():
-        """
-        """
+        self.rem.fit(X, y)
+        predicted = self.rem.predict(X)
+        npt.assert_array_equal(np.unique(predicted), classes)
 
-    def test_predict():
-        """
-        """
+        assert predicted.shape == (n_samples,)
+        npt.assert_array_equal(predicted, y)
+
+    def test_fit_functions(self):
+        """Test the fit functions."""
+        TestRegressionEM.check_predictions(self, self.X, self.y)
+        TestRegressionEM.check_predictions(self, self.X_sp, self.y)
