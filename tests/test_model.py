@@ -110,11 +110,11 @@ class TestRegressionEM():
     def test_calc_log_likelihood(self):
         """
         """
-        left_param = (np.array([1, 1]), 0.5)
-        right_param = (np.array([1, 1]), 0.5)
-        ans = np.array([])
-        npt.assert_almost_equal(ans, self.rem._calc_log_likelihood(self.left_feat, self.right_feat, self.y), decimal=7)
-        npt.assert_almost_equal(ans, self.rem._calc_log_likelihood(self.left_feat_sp, self.right_feat_sp, self.y), decimal=7)
+        left_feat = np.array([[0, 0], [0, 0], [0, 0]])
+        right_feat = np.array([[0, 0], [0, 0], [0, 0]])
+        labels = [1, 1, 1]
+        ans = 3 * np.log(self.rem._epsilon)
+        assert ans == self.rem._calc_log_likelihood(left_feat, right_feat, labels)
 
     def check_predictions(self, X: Matrix, y: np.array):
         """Check that the model is able to fit the classification data."""

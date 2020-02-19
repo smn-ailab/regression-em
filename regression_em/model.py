@@ -194,7 +194,7 @@ class RegressionEM(BaseEstimator):
         reg.fit(feat_mat, self._calc_logits(responsibilities), sample_weights)
         return reg.coef_, reg.intercept_
 
-    def _calc_log_likelihood(self, left_feat: Matrix, right_feat: Matrix,
+    def _calc_log_likelihood(self, left_param: np.array, left_feat: Matrix, right_param: np.array, right_feat: Matrix,
                              labels: np.array) -> np.array:
         """Return log likelihood.
 
@@ -252,7 +252,7 @@ class RegressionEM(BaseEstimator):
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
         self.right_params = (np.random.rand(right_feat.shape[1]), random())
 
-        self.log_likelihoods = [self._calc_log_likelihood(left_feat, right_feat, labels)]
+        self.log_likelihoods = [self._calc_log_likelihood(self.left_params, left_feat, self.right_params, right_feat, labels)]
         max_ll = self.log_likelihoods[-1]
         best_left_params = self.left_params
         best_right_params = self.right_params
@@ -272,7 +272,7 @@ class RegressionEM(BaseEstimator):
             self.right_params = self._update_params(right_feat, right_responsibilities, sample_weights)
 
             # calculating log likelihood and judging convergence
-            self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, labels))
+            self.log_likelihoods.append(self._calc_log_likelihood(self.left_params, left_feat, self.right_params, right_feat, labels))
 
             if max_ll < self.log_likelihoods[-1]:
                 max_ll = self.log_likelihoods[-1]
