@@ -14,8 +14,9 @@ class TestRegressionEM():
     """Check thata the model can work."""
 
     def setup(self):
-        """
-        :Parameters:
+        """Initialize hyper parameters.
+
+        : Parameters:
 
         X: {np.array}
         Feature matrix for tests.
@@ -36,7 +37,7 @@ class TestRegressionEM():
         self.y_multi = np.array([0, 1, 2])
 
     def test_integers_to_bools(self):
-        """Test to convert  in the following cases.
+        """Test to convert in the following cases.
 
         1. 0/1 label
         2. multi class label
@@ -50,7 +51,6 @@ class TestRegressionEM():
         1. np.array
         2. csr_matrix
         """
-
         coef = np.array([1, 1])
         intercept = 0.5
         ans = np.array([0.817574, 0.817574, 0.924142])
@@ -75,7 +75,7 @@ class TestRegressionEM():
         1. target_param =! 1 or ref_param =! 1 and label = False
         2. target_param = 1 and ref_param = 1 and label = False -> 1 (avoid zero devision)
         3. label = True -> 1
-        (see eq.1 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
+        (see eq.1 of https: // static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
         """
         target_prob = [0.4, 1, 0.1]
         ref_prob = [0.5, 1, 0.9]
@@ -108,12 +108,12 @@ class TestRegressionEM():
         """
 
     def test_calc_log_likelihood(self):
-        """Test that the model is able to handle 2 exceptions.
+        """Test that the model can work and handle 2 exceptions.
 
-        1.
-        2.
+        exceptions
+        1. The case that prob = 0 and label = False.
+        2. The case that prob = 0 and label = True.
         """
-        # params for the case that prob = 0 and label = False.
         left_param = (np.array([1, 1]), 0.5)
         right_param = (np.array([1, 1]), 0.5)
         labels = np.array([True, True, False])
