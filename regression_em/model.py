@@ -165,7 +165,7 @@ class RegressionEM(BaseEstimator):
 
         return np.vectorize(self._calc_responsibility)(target_probs, ref_probs, labels)
 
-    def _update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights) -> RegParam:
+    def _update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights: np.array) -> RegParam:
         """Return fitted Logistic Regression params.
 
         For detail, see eq.2 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf.
@@ -257,19 +257,19 @@ class RegressionEM(BaseEstimator):
         best_left_params = self.left_params
         best_right_params = self.right_params
 
-        sample_weights = None
+        self.sample_weights = None
         if self._class_weights == 'balanced':
             pos_ratio = np.count_nonzero(y) / y.size
-            sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
+            self.sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
 
         for epoch in range(self._max_iter):
             # Update left latent params
             left_responsibilities = self._update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
-            self.left_params = self._update_params(left_feat, left_responsibilities, sample_weights)
+            self.left_params = self._update_params(left_feat, left_responsibilities, self.sample_weights)
 
             # Update right latent params
             right_responsibilities = self._update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, labels)
-            self.right_params = self._update_params(right_feat, right_responsibilities, sample_weights)
+            self.right_params = self._update_params(right_feat, right_responsibilities, self.sample_weights)
 
             # calculating log likelihood and judging convergence
             self.log_likelihoods.append(self._calc_log_likelihood(self.left_params, left_feat, self.right_params, right_feat, labels))
