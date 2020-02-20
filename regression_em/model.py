@@ -227,7 +227,6 @@ class RegressionEM(BaseEstimator):
 
         return positive_sample_log_lh + negative_sample_log_lh
 
-    # def fit(self, left_feat: np.ndarray, right_feat: np.ndarray, labels: np.ndarray) -> None:
     def fit(self, X: Matrix, y: np.array) -> None:
         """Estimate regression EM params.
 
@@ -240,7 +239,7 @@ class RegressionEM(BaseEstimator):
         """
         # separate dataset with index.
         if sp.issparse(X):
-            left_feat = X[:, 0:self._split_index]
+            left_feat = X[:, :self._split_index]
             right_feat = X[:, self._split_index:]
         else:
             left_feat, right_feat = np.hsplit(X, [self._split_index])
