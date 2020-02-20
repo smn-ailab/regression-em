@@ -134,6 +134,7 @@ class TestRegressionEM():
         right_param = (np.array([1, 1]), 0.5)
         labels = np.array([True, True, False])
         ans = -2.73007
+        assert ans == approx(self.rem._calc_log_likelihood(left_param, self.left_feat, right_param, self.right_feat, labels), rel=1e-4)
 
         # params for the case that prob = 0 and label = False.
         left_param_zero = (np.array([-10000, -10000]), -10000)
@@ -147,7 +148,6 @@ class TestRegressionEM():
 
         ans_exceptions = 3 * np.log(self.rem._epsilon)
 
-        assert ans == approx(self.rem._calc_log_likelihood(left_param, self.left_feat, right_param, self.right_feat, labels), rel=1e-4)
         assert ans_exceptions == approx(self.rem._calc_log_likelihood(left_param_zero, self.left_feat, right_param_zero, self.right_feat, labels_zero), rel=1e-4)
         assert ans_exceptions == approx(self.rem._calc_log_likelihood(left_param_one, self.left_feat, right_param_one, self.right_feat, labels_one), rel=1e-4)
 
