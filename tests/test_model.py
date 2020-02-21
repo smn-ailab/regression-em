@@ -68,7 +68,6 @@ class TestRegressionEM():
         """
         prob = np.array([0.5, 0, 1])
         ans = np.array([0, -23.0258509298, 23.0258509298])
-
         assert ans == approx(self.rem._calc_logits(prob), rel=1e-4)
 
     def test_calc_responsibility(self):
@@ -173,5 +172,5 @@ class TestRegressionEM():
 
     def test_fit_functions(self):
         """Test the fit functions."""
-        TestRegressionEM.check_predictions(self, self.X, self.y)
-        TestRegressionEM.check_predictions(self, self.X_sp, self.y)
+        self.check_predictions(self.X, self.y)
+        self.check_predictions(self.X_sp, self.y)
