@@ -4,7 +4,7 @@ For the detail of this algortithm,
 ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 """
 from random import random
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 import numpy as np
 import scipy.sparse as sp
@@ -76,7 +76,15 @@ class RegressionEM(BaseEstimator):
     @staticmethod
     def _integers_to_bools(y: np.array) -> np.array:
         """Convert the type of labels from integers to bools."""
-        return [True if i > 0 else False for i in y]
+        return np.array([True if i > 0 else False for i in y])
+
+    @staticmethod
+    def _calc_sample_weights(labels: np.array, class_weights: Optional[str]) -> np.array:
+        sample_weights = None
+        if class_weights == 'balanced':
+            pos_ratio = np.sum(labels) / labels.size
+            sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
+        return sample_weights
 
     @staticmethod
     def _calc_probs(coef: np.array, intercept: float, feat_mat: Matrix) -> np.array:
@@ -256,19 +264,16 @@ class RegressionEM(BaseEstimator):
         best_left_params = self.left_params
         best_right_params = self.right_params
 
-        self.sample_weights = None
-        if self._class_weights == 'balanced':
-            pos_ratio = np.count_nonzero(y) / y.size
-            self.sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
+        sample_weights = self._calc_sample_weights(labels, self._class_weights)
 
         for epoch in range(self._max_iter):
             # Update left latent params
             left_responsibilities = self._update_responsibilities(self.left_params, left_feat, self.right_params, right_feat, labels)
-            self.left_params = self._update_params(left_feat, left_responsibilities, self.sample_weights)
+            self.left_params = self._update_params(left_feat, left_responsibilities, sample_weights)
 
             # Update right latent params
             right_responsibilities = self._update_responsibilities(self.right_params, right_feat, self.left_params, left_feat, labels)
-            self.right_params = self._update_params(right_feat, right_responsibilities, self.sample_weights)
+            self.right_params = self._update_params(right_feat, right_responsibilities, sample_weights)
 
             # calculating log likelihood and judging convergence
             self.log_likelihoods.append(self._calc_log_likelihood(self.left_params, left_feat, self.right_params, right_feat, labels))

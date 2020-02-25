@@ -47,6 +47,14 @@ class TestRegressionEM():
         assert ans == self.rem._integers_to_bools(self.y)
         assert ans == self.rem._integers_to_bools(self.y_multi)
 
+    def test_calc_sample_weights(self):
+        """Test that the model can return accurate class_weights."""
+        ans_wo_weights = None
+        ans_w_weights = [3, 1.5, 1.5]
+
+        assert ans_wo_weights == self.rem._calc_sample_weights(self.y, None)
+        assert ans_w_weights == approx(self.rem._calc_sample_weights(self.y, 'balanced'), rel=1e-4)
+
     def test_calc_probs(self):
         """Test to calculate probabilities in the following input cases.
 
@@ -115,12 +123,6 @@ class TestRegressionEM():
 
         rem_wo_alpha = RegressionEM(split_index=2, max_iter=10, class_weights='balanced', epsilon=10**-10)
         assert rem_wo_alpha._update_params(self.X, responsibilities, sample_weights)
-
-    def test_class_weights(self):
-        """Test that the model can return accurate class_weights."""
-        self.rem.fit(self.X, self.y)
-        ans = [3, 1.5, 1.5]
-        assert ans == approx(self.rem.sample_weights, rel=1e-4)
 
     def test_calc_log_likelihood(self):
         """Test that the model can work and handle 2 exceptions.
