@@ -80,6 +80,17 @@ class RegressionEM(BaseEstimator):
 
     @staticmethod
     def _calc_sample_weights(labels: np.array, class_weights: Optional[str]) -> np.array:
+        """Return sample weights.
+
+        :parameters:
+
+        labels: Sequence of boolean indicating each sample is positive or negative.
+        class_weights: The indicator that the model use class_weights or not.
+
+        :return:
+
+        Sequence of weights.
+        """
         sample_weights = None
         if class_weights == 'balanced':
             pos_ratio = np.sum(labels) / labels.size
