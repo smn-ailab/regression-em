@@ -4,13 +4,12 @@ For the detail of this algortithm,
 ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 """
 from random import random
-from typing import Tuple, Union, Optional
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import scipy.sparse as sp
-from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.base import BaseEstimator
-
+from sklearn.linear_model import LinearRegression, Ridge
 
 # Define type.
 Matrix = Union[np.ndarray, sp.csr_matrix]
