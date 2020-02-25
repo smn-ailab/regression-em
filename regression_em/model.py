@@ -4,13 +4,12 @@ For the detail of this algortithm,
 ["Position Bias Estimation for Unbiased Learning to Rank in Personal Search" Xuanhui Wang et al.](https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf)
 """
 from random import random
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import scipy.sparse as sp
-from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.base import BaseEstimator
-
+from sklearn.linear_model import LinearRegression, Ridge
 
 # Define type.
 Matrix = Union[np.ndarray, sp.csr_matrix]
@@ -76,7 +75,26 @@ class RegressionEM(BaseEstimator):
     @staticmethod
     def _integers_to_bools(y: np.array) -> np.array:
         """Convert the type of labels from integers to bools."""
-        return [True if i > 0 else False for i in y]
+        return np.array([True if i > 0 else False for i in y])
+
+    @staticmethod
+    def _calc_sample_weights(labels: np.array, class_weights: Optional[str]) -> np.array:
+        """Return sample weights.
+
+        :parameters:
+
+        labels: Sequence of boolean indicating each sample is positive or negative.
+        class_weights: The indicator that the model use class_weights or not.
+
+        :return:
+
+        Sequence of weights.
+        """
+        sample_weights = None
+        if class_weights == 'balanced':
+            pos_ratio = np.sum(labels) / labels.size
+            sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
+        return sample_weights
 
     @staticmethod
     def _calc_probs(coef: np.array, intercept: float, feat_mat: Matrix) -> np.array:
@@ -152,7 +170,7 @@ class RegressionEM(BaseEstimator):
         target_feat: Feature matrix corresponding to the latent factor to be updated.
         ref_params: Regression params corresponding to the refered latent factor.
         ref_feat: Feature matrix corresponding to the refered latent factor.
-        labels: Sequence of boolean indicating each sample is positivei or negative.
+        labels: Sequence of boolean indicating each sample is positive or negative.
 
         :return:
 
@@ -165,7 +183,7 @@ class RegressionEM(BaseEstimator):
 
         return np.vectorize(self._calc_responsibility)(target_probs, ref_probs, labels)
 
-    def _update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights) -> RegParam:
+    def _update_params(self, feat_mat: Matrix, responsibilities: np.array, sample_weights: np.array) -> RegParam:
         """Return fitted Logistic Regression params.
 
         For detail, see eq.2 of https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/46485.pdf.
@@ -194,7 +212,7 @@ class RegressionEM(BaseEstimator):
         reg.fit(feat_mat, self._calc_logits(responsibilities), sample_weights)
         return reg.coef_, reg.intercept_
 
-    def _calc_log_likelihood(self, left_feat: Matrix, right_feat: Matrix,
+    def _calc_log_likelihood(self, left_params: np.array, left_feat: Matrix, right_params: np.array, right_feat: Matrix,
                              labels: np.array) -> np.array:
         """Return log likelihood.
 
@@ -212,8 +230,8 @@ class RegressionEM(BaseEstimator):
         log_likelihood
         """
         # Calculate predicted probabilities of outcome.
-        outcome_probs = self._calc_probs(self.left_params[0], self.left_params[1], left_feat) * \
-            self._calc_probs(self.right_params[0], self.right_params[1], right_feat)
+        outcome_probs = self._calc_probs(left_params[0], left_params[1], left_feat) * \
+            self._calc_probs(right_params[0], right_params[1], right_feat)
 
         # Calculate log likelihood with positive samples only.
         positive_sample_probs = outcome_probs[labels]  # Get list of probs whose sample labels are True.
@@ -227,7 +245,6 @@ class RegressionEM(BaseEstimator):
 
         return positive_sample_log_lh + negative_sample_log_lh
 
-    # def fit(self, left_feat: np.ndarray, right_feat: np.ndarray, labels: np.ndarray) -> None:
     def fit(self, X: Matrix, y: np.array) -> None:
         """Estimate regression EM params.
 
@@ -240,7 +257,7 @@ class RegressionEM(BaseEstimator):
         """
         # separate dataset with index.
         if sp.issparse(X):
-            left_feat = X[:, 0:self._split_index]
+            left_feat = X[:, :self._split_index]
             right_feat = X[:, self._split_index:]
         else:
             left_feat, right_feat = np.hsplit(X, [self._split_index])
@@ -252,15 +269,12 @@ class RegressionEM(BaseEstimator):
         self.left_params = (np.random.rand(left_feat.shape[1]), random())
         self.right_params = (np.random.rand(right_feat.shape[1]), random())
 
-        self.log_likelihoods = [self._calc_log_likelihood(left_feat, right_feat, labels)]
+        self.log_likelihoods = [self._calc_log_likelihood(self.left_params, left_feat, self.right_params, right_feat, labels)]
         max_ll = self.log_likelihoods[-1]
         best_left_params = self.left_params
         best_right_params = self.right_params
 
-        sample_weights = None
-        if self._class_weights == 'balanced':
-            pos_ratio = np.count_nonzero(y) / y.size
-            sample_weights = np.array([1 / pos_ratio if l else 1 / (1 - pos_ratio) for l in labels])
+        sample_weights = self._calc_sample_weights(labels, self._class_weights)
 
         for epoch in range(self._max_iter):
             # Update left latent params
@@ -272,7 +286,7 @@ class RegressionEM(BaseEstimator):
             self.right_params = self._update_params(right_feat, right_responsibilities, sample_weights)
 
             # calculating log likelihood and judging convergence
-            self.log_likelihoods.append(self._calc_log_likelihood(left_feat, right_feat, labels))
+            self.log_likelihoods.append(self._calc_log_likelihood(self.left_params, left_feat, self.right_params, right_feat, labels))
 
             if max_ll < self.log_likelihoods[-1]:
                 max_ll = self.log_likelihoods[-1]
