@@ -28,6 +28,7 @@ jobs: # a collection of steps
       - run:
           name: Build documents
           command: |
+            . venv/bin/activate
             sphinx-build -a ./docs/ ./docs/html/;
             tar cfvz html.tar.gz docs/html/
       - persist_to_workspace:
