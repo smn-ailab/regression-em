@@ -35,9 +35,6 @@ jobs: # a collection of steps
 
 workflows:
   version: 2.1
-  build_deploy:
+  build_test:
     jobs:
       - build
-        filters:
-          branches:
-            only: develop
