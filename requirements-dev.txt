@@ -4,5 +4,4 @@ isort
 mypy
 pydocstyle
 pytest
-Sphinx
 -e .

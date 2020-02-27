@@ -22,19 +22,6 @@ jobs: # a collection of steps
             . venv/bin/activate
             pytest tests/
           no_output_timeout: 15m
-      - store_artifacts: # special step to store test reports as artifacts
-          path: test-reports/
-          destination: tr1
-      - run:
-          name: Build documents
-          command: |
-            . venv/bin/activate
-            sphinx-build -a ./docs/ ./docs/html/;
-            tar cfvz html.tar.gz docs/html/
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
 
 workflows:
   version: 2.1
