@@ -38,8 +38,6 @@ workflows:
   build_deploy:
     jobs:
       - build
-          requires:
-            - build
           filters:
             branches:
               only: develop
