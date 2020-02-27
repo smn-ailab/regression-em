@@ -9,7 +9,7 @@ jobs: # a collection of steps
       - setup_remote_docker
       - run:
           name: Build Docker image
-          command: docker build -t $suguruyaginuma/regression_em:latest .
+          command: docker build -t suguruyaginuma/regression_em:latest .
       - run: # install and activate virtual environment with pip
           name: Install dependencies
           command: |
