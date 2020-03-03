@@ -12,17 +12,8 @@ jobs: # a collection of steps
             docker create -v /ci --name regressionem-test suguruyaginuma/regression_em:latest /bin/true
             docker cp ./ regressionem-test:/ci
             docker run --volumes-from regressionem-test suguruyaginuma/regression_em:latest
-
-      - run: # install and activate virtual environment with pip
-          name: Install dependencies
-          command: |
-            sudo pip install --upgrade pip
-            sudo pip install -r requirements.txt -r requirements-dev.txt
-      - run: # run tests
-          name: Run tests
-          command: |
-            pytest ~/ci/tests/
-          no_output_timeout: 15m
+            pip install --upgrade pip
+            pip install -r requirements.txt -r requirements-dev.txt
 
 workflows:
   version: 2.1
