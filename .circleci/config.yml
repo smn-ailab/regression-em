@@ -2,25 +2,25 @@ version: 2.1
 jobs: # a collection of steps
   build: # runs not using Workflows must have a `build` job as entry point
     docker: # run the steps with Docker
-      - image: circleci/python:3.8.0
+      - image: suguruyaginuma/regression_em:latest
     steps: # a collection of executable commands
       - checkout # special step to check out source code to the working directory
-      - setup_remote_docker
       - run:
-          name: Build Docker image
-          command: docker build -t suguruyaginuma/regression_em:latest ./.devcontainer
+          name: Creating Docker container and enter
+          command: |
+            docker create -v /ci --name regressionem-test suguruyaginuma/regression_em:latest /bin/true
+            docker cp ./ regressionem-test:/ci
+            docker run --volumes-from regressionem-test suguruyaginuma/regression_em:latest
+
       - run: # install and activate virtual environment with pip
           name: Install dependencies
           command: |
-            python3 -m venv venv
-            . venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt -r requirements-dev.txt
       - run: # run tests
           name: Run tests
           command: |
-            . venv/bin/activate
-            pytest tests/
+            pytest ~/ci/tests/
           no_output_timeout: 15m
 
 workflows:
