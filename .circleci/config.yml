@@ -10,7 +10,7 @@ jobs: # a collection of steps
       - run:
           name: Creating Docker container and enter
           command: |
-            docker create -v /ci --name regressionem-test suguruyaginuma/regression_em:latest /bin/true
+            docker create -v ~/ci --name regressionem-test suguruyaginuma/regression_em:latest /bin/true
             docker cp ./ regressionem-test:/ci
             docker run --volumes-from regressionem-test suguruyaginuma/regression_em:latest
 
