@@ -2,7 +2,7 @@ version: 2.1
 jobs: # a collection of steps
   build: # runs not using Workflows must have a `build` job as entry point
     docker: # run the steps with Docker
-      - image: suguruyaginuma/regression_em:latest
+      - image: circleci/python:3.6.1
     steps: # a collection of executable commands
       - checkout # special step to check out source code to the working directory
       - run:
