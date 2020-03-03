@@ -3,7 +3,7 @@ jobs: # a collection of steps
   build: # runs not using Workflows must have a `build` job as entry point
     working_directory: ~/ci # directory where steps will run
     docker: # run the steps with Docker
-      - image: circleci/python:3.8-buster
+      - image: suguruyaginuma/regression_em:latest
     steps: # a collection of executable commands
       - checkout # special step to check out source code to the working directory
       - setup_remote_docker
