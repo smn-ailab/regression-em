@@ -6,14 +6,6 @@ jobs: # a collection of steps
       - image: suguruyaginuma/regression_em:latest
     steps: # a collection of executable commands
       - checkout # special step to check out source code to the working directory
-      - setup_remote_docker
-      - run:
-          name: Creating Docker container and enter
-          command: |
-            docker create -v /ci --name regressionem-test suguruyaginuma/regression_em:latest /bin/true
-            docker cp ~/ci regressionem-test:/ci
-            docker run --volumes-from regressionem-test suguruyaginuma/regression_em:latest
-
       - run: # install and activate virtual environment with pip
           name: Install dependencies
           command: |
