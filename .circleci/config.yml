@@ -3,7 +3,7 @@ jobs: # a collection of steps
   build: # runs not using Workflows must have a `build` job as entry point
     working_directory: ~/ci # directory where steps will run
     docker: # run the steps with Docker
-      - image: circleci/python:3.8-buster
+      - image: circleci/python:3.6.1
     steps: # a collection of executable commands
       - checkout # special step to check out source code to the working directory
       - setup_remote_docker
@@ -17,7 +17,6 @@ jobs: # a collection of steps
       - run: # install and activate virtual environment with pip
           name: Install dependencies
           command: |
-            sudo pip install --upgrade pip
             sudo pip install -r requirements.txt -r requirements-dev.txt
       - run: # run tests
           name: Run tests
