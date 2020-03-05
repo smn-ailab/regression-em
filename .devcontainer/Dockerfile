@@ -1,6 +1,6 @@
 # python:3.8-slim-buster is recommended for Python base image.
 # See this https://pythonspeed.com/articles/base-image-python-docker-images/
-FROM python:3.8.2-slim-buster
+FROM python:3.8-slim-buster
 
 # Install system commands.
 # See https://stackoverflow.com/a/47143497 for the meaning of `set -ex`.
