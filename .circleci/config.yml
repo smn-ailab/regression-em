@@ -8,7 +8,8 @@ jobs: # a collection of steps
       - checkout # special step to check out source code to the working directory
       - run: #
           name: Setup environments
-          environment: LLVM_CONFIG=/usr/lib/llvm-8/bin/llvm-config
+          environment:
+            LLVM_CONFIG: /usr/lib/llvm-8/bin/llvm-config
           command: |
             set -ex \
             && apt-get update \
