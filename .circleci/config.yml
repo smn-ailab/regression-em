@@ -3,9 +3,27 @@ jobs: # a collection of steps
   build: # runs not using Workflows must have a `build` job as entry point
     working_directory: ~/ci # directory where steps will run
     docker: # run the steps with Docker
-      - image: suguruyaginuma/regression_em:1.0.0
+      - image: python:3.8-slim-buster
     steps: # a collection of executable commands
       - checkout # special step to check out source code to the working directory
+      - run: #
+          name: Setup environments
+          environment: LLVM_CONFIG=/usr/lib/llvm-8/bin/llvm-config
+          command: |
+            set -ex \
+            && apt-get update \
+            && apt-get install -y git gnupg openssh-client wget libblas-dev liblapack-dev software-properties-common
+
+            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+            && add-apt-repository "deb http://apt.llvm.org/buster/ llvm-toolchain-buster-8 main" \
+            && apt-get update \
+            && apt-get -y install clang-8 lldb-8 lld-8 gfortran
+
+            mkdir -p -m 0600 ~/.ssh \
+            && ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+            pip install --upgrade pip
+
       - run: # install and activate virtual environment with pip
           name: Install dependencies
           command: |
