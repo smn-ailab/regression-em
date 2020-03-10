@@ -44,8 +44,8 @@ class TestRegressionEM():
         2. multi class label
         """
         ans = [False, True, True]
-        assert ans == self.rem._integers_to_bools(self.y)
-        assert ans == self.rem._integers_to_bools(self.y_multi)
+        assert (ans == self.rem._integers_to_bools(self.y)).all()
+        assert (ans == self.rem._integers_to_bools(self.y_multi)).all()
 
     def test_calc_sample_weights(self):
         """Test that the model can return accurate class_weights."""
